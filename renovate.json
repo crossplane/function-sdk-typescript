@@ -5,10 +5,9 @@
   ],
   "semanticCommits": "enabled",
   "labels": [
+    "automated",
     "dependencies"
   ],
-  "assignees": [],
-  "reviewers": [],
   "packageRules": [
     {
       "description": "Group all non-major updates together",
@@ -22,72 +21,24 @@
       "groupSlug": "all-minor-patch"
     },
     {
-      "description": "Automerge non-major updates",
-      "matchUpdateTypes": [
-        "minor",
-        "patch",
-        "pin",
-        "digest"
+      "description": "Group GitHub Actions updates",
+      "matchManagers": [
+        "github-actions"
       ],
-      "automerge": true,
-      "minimumReleaseAge": "7 days"
-    },
-    {
-      "description": "Require approval for major updates",
-      "matchUpdateTypes": [
-        "major"
+      "extends": [
+        "helpers:pinGitHubActionDigests"
       ],
-      "automerge": false
-    },
-    {
-      "description": "Group TypeScript and related type definitions",
-      "matchPackagePatterns": [
-        "^typescript$",
-        "^@types/"
-      ],
-      "groupName": "TypeScript and type definitions"
-    },
-    {
-      "description": "Group ESLint and related packages",
-      "matchPackagePatterns": [
-        "^eslint",
-        "^@eslint/"
-      ],
-      "groupName": "ESLint packages"
-    },
-    {
-      "description": "Group testing packages",
-      "matchPackagePatterns": [
-        "^vitest",
-        "^@vitest/"
-      ],
-      "groupName": "Testing packages"
-    },
-    {
-      "description": "Group gRPC packages",
-      "matchPackagePatterns": [
-        "^@grpc/",
-        "^grpc$"
-      ],
-      "groupName": "gRPC packages"
-    },
-    {
-      "description": "Group protobuf packages",
-      "matchPackagePatterns": [
-        "^@?[^/]*protobuf",
-        "^ts-proto$"
-      ],
-      "groupName": "Protobuf packages"
+      "groupName": "GitHub Actions"
     }
   ],
   "vulnerabilityAlerts": {
     "labels": [
       "security"
-    ],
-    "automerge": false
+    ]
   },
   "schedule": [
-    "before 6am on Monday"
+    "after 10pm on sunday",
+    "before 6am on monday"
   ],
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2
