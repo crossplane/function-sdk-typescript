@@ -66,7 +66,7 @@
       "description": "Group gRPC packages",
       "matchPackagePatterns": [
         "^@grpc/",
-        "^grpc"
+        "^grpc$"
       ],
       "groupName": "gRPC packages"
     },
