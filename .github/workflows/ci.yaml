@@ -158,7 +158,20 @@ jobs:
       - name: Set package version
         env:
           VERSION: ${{ needs.version.outputs.version }}
-        run: npm version "${VERSION#v}" --no-git-tag-version
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ -z "${INPUT_VERSION}" ]; then
+            # No explicit version provided, set it to the computed version
+            npm version "$VERSION" --no-git-tag-version
+          else
+            # Explicit version provided, verify it matches package.json
+            PACKAGE_VERSION="v$(npm pkg get version | tr -d '"')"
+            if [ "$VERSION" != "$PACKAGE_VERSION" ]; then
+              echo "Error: Provided version $VERSION does not match package.json version $PACKAGE_VERSION"
+              exit 1
+            fi
+            echo "Version $VERSION matches package.json, proceeding with publish"
+          fi
 
       - run: npm run clean
       - run: npm run build
