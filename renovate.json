@@ -83,7 +83,7 @@
     "labels": [
       "security"
     ],
-    "automerge": true
+    "automerge": false
   },
   "schedule": [
     "before 6am on Monday"
