@@ -30,7 +30,7 @@
         "digest"
       ],
       "automerge": true,
-      "minimumReleaseAge": "14 days"
+      "minimumReleaseAge": "7 days"
     },
     {
       "description": "Require approval for major updates",
