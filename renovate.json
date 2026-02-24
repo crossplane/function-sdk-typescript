@@ -73,8 +73,8 @@
     {
       "description": "Group protobuf packages",
       "matchPackagePatterns": [
-        "protobuf",
-        "proto"
+        "^@?[^/]*protobuf",
+        "^ts-proto$"
       ],
       "groupName": "Protobuf packages"
     }
