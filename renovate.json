@@ -11,48 +11,78 @@
   "packageRules": [
     {
       "description": "Group all non-major updates together",
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
       "groupName": "all non-major dependencies",
       "groupSlug": "all-minor-patch"
     },
     {
       "description": "Automerge non-major updates",
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "automerge": true
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "automerge": true,
+      "minimumReleaseAge": "14 days"
     },
     {
       "description": "Require approval for major updates",
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "automerge": false
     },
     {
       "description": "Group TypeScript and related type definitions",
-      "matchPackagePatterns": ["^typescript$", "^@types/"],
+      "matchPackagePatterns": [
+        "^typescript$",
+        "^@types/"
+      ],
       "groupName": "TypeScript and type definitions"
     },
     {
       "description": "Group ESLint and related packages",
-      "matchPackagePatterns": ["^eslint", "^@eslint/"],
+      "matchPackagePatterns": [
+        "^eslint",
+        "^@eslint/"
+      ],
       "groupName": "ESLint packages"
     },
     {
       "description": "Group testing packages",
-      "matchPackagePatterns": ["^vitest", "^@vitest/"],
+      "matchPackagePatterns": [
+        "^vitest",
+        "^@vitest/"
+      ],
       "groupName": "Testing packages"
     },
     {
       "description": "Group gRPC packages",
-      "matchPackagePatterns": ["^@grpc/", "^grpc"],
+      "matchPackagePatterns": [
+        "^@grpc/",
+        "^grpc"
+      ],
       "groupName": "gRPC packages"
     },
     {
       "description": "Group protobuf packages",
-      "matchPackagePatterns": ["protobuf", "proto"],
+      "matchPackagePatterns": [
+        "protobuf",
+        "proto"
+      ],
       "groupName": "Protobuf packages"
     }
   ],
   "vulnerabilityAlerts": {
-    "labels": ["security"],
+    "labels": [
+      "security"
+    ],
     "automerge": true
   },
   "schedule": [
