@@ -2,6 +2,8 @@
 
 A TypeScript SDK for building [Crossplane Composition Functions](https://docs.crossplane.io/latest/composition/compositions/). This SDK provides type-safe interfaces and utilities for creating functions that generate and manage Crossplane resources.
 
+A template function built on this SDK is available at <https://github.com/crossplane/function-template-typescript>.
+
 ## Overview
 
 This SDK can be used as the base of a Crossplane Composition function.
