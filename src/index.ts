@@ -38,6 +38,7 @@ export {
   asObject,
   asStruct,
   fromObject,
+  fromModel,
   toObject,
   newDesiredComposed,
   mustStructObject,
