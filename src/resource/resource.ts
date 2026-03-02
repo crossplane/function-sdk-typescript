@@ -171,11 +171,13 @@ export function toObject(
 }
 
 /**
- * Create a Resource from a kubernetes-models object or plain object
- * This is a convenience function that accepts objects with a toJSON() method
- * (like kubernetes-models) or plain JavaScript objects
+ * Create a Resource from a kubernetes-models object
+ * This is a convenience function for objects with a toJSON() method
+ * (like kubernetes-models objects)
  *
- * @param obj - A kubernetes-models object or plain JavaScript object
+ * For plain JavaScript objects, use fromObject() instead.
+ *
+ * @param obj - A kubernetes-models object with a toJSON() method
  * @param connectionDetails - Optional connection details
  * @param ready - Optional ready status
  * @returns A Resource
@@ -189,24 +191,18 @@ export function toObject(
  *   spec: { containers: [{ name: "app", image: "nginx" }] }
  * });
  *
- * // Simple conversion - automatically calls toJSON() if available
+ * // Automatically calls toJSON() on the model object
  * const resource = fromModel(pod);
  * ```
  */
 export function fromModel<T extends Record<string, unknown>>(
-  obj: T | { toJSON: () => T },
+  obj: { toJSON: () => T },
   connectionDetails?: ConnectionDetails,
   ready?: Ready,
 ): Resource {
-  const resourceObj = typeof obj === "object" &&
-      obj !== null &&
-      "toJSON" in obj &&
-      typeof (obj as any).toJSON === "function"
-    ? (obj as any).toJSON()
-    : (obj as T);
-  return Resource.fromJSON({
-    resource: resourceObj as Record<string, unknown>,
-    connectionDetails: connectionDetails || {},
-    ready: ready !== undefined ? ready : Ready.READY_UNSPECIFIED,
-  });
+  return fromObject(
+    obj.toJSON() as Record<string, unknown>,
+    connectionDetails,
+    ready,
+  );
 }
