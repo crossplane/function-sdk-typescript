@@ -182,6 +182,7 @@ You can use type-safe Kubernetes models from the `kubernetes-models` package:
 ```typescript
 import { Deployment } from "kubernetes-models/apps/v1";
 import { Pod } from "kubernetes-models/v1";
+import { fromModel } from "@crossplane-org/function-sdk-typescript";
 
 // Create a type-safe Pod
 const pod = new Pod({
@@ -200,7 +201,10 @@ const pod = new Pod({
 // Validate the pod
 pod.validate();
 
-// Convert to Resource
+// Convert to Resource using the simplified helper
+dcds["my-pod"] = fromModel(pod);
+
+// Alternative: Using the lower-level API
 dcds["my-pod"] = Resource.fromJSON({
     resource: pod.toJSON()
 });

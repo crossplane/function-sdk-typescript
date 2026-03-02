@@ -1,5 +1,5 @@
 // Resource utilities for working with Kubernetes resources and protobuf conversion
-import { Resource, Ready } from '../proto/run_function.js';
+import { Ready, Resource } from '../proto/run_function.js';
 
 // Type aliases for better readability
 export type ConnectionDetails = { [key: string]: Buffer };
@@ -51,7 +51,9 @@ export function newDesiredComposed(): DesiredComposed {
  * @param struct - The protobuf Struct to convert
  * @returns A plain JavaScript object representing the Kubernetes resource
  */
-export function asObject(struct: Record<string, unknown> | undefined): Record<string, unknown> {
+export function asObject(
+  struct: Record<string, unknown> | undefined,
+): Record<string, unknown> {
   if (!struct) {
     return {};
   }
@@ -73,7 +75,9 @@ export function asObject(struct: Record<string, unknown> | undefined): Record<st
  * @param obj - The plain JavaScript object to convert
  * @returns A protobuf Struct representation
  */
-export function asStruct(obj: Record<string, unknown>): Record<string, unknown> {
+export function asStruct(
+  obj: Record<string, unknown>,
+): Record<string, unknown> {
   // In our TypeScript implementation, this is essentially a pass-through
   // The actual conversion happens in the protobuf serialization layer
   return obj;
@@ -92,12 +96,16 @@ export function asStruct(obj: Record<string, unknown>): Record<string, unknown> 
  * @returns A Struct representation
  * @throws Error if conversion fails
  */
-export function mustStructObject(obj: Record<string, unknown>): Record<string, unknown> {
+export function mustStructObject(
+  obj: Record<string, unknown>,
+): Record<string, unknown> {
   try {
     return asStruct(obj);
   } catch (error) {
     throw new Error(
-      `Failed to convert object to struct: ${error instanceof Error ? error.message : String(error)}`
+      `Failed to convert object to struct: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     );
   }
 }
@@ -121,7 +129,9 @@ export function mustStructJSON(json: string): Record<string, unknown> {
     return asStruct(obj);
   } catch (error) {
     throw new Error(
-      `Failed to parse JSON to struct: ${error instanceof Error ? error.message : String(error)}`
+      `Failed to parse JSON to struct: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     );
   }
 }
@@ -138,7 +148,7 @@ export function mustStructJSON(json: string): Record<string, unknown> {
 export function fromObject(
   obj: Record<string, unknown>,
   connectionDetails?: ConnectionDetails,
-  ready?: Ready
+  ready?: Ready,
 ): Resource {
   return Resource.fromJSON({
     resource: obj,
@@ -154,6 +164,45 @@ export function fromObject(
  * @param resource - The Resource to extract from
  * @returns The plain JavaScript object, or undefined if not present
  */
-export function toObject(resource: Resource): Record<string, unknown> | undefined {
+export function toObject(
+  resource: Resource,
+): Record<string, unknown> | undefined {
   return resource.resource;
+}
+
+/**
+ * Create a Resource from a kubernetes-models object
+ * This is a convenience function for objects with a toJSON() method
+ * (like kubernetes-models objects)
+ *
+ * For plain JavaScript objects, use fromObject() instead.
+ *
+ * @param obj - A kubernetes-models object with a toJSON() method
+ * @param connectionDetails - Optional connection details
+ * @param ready - Optional ready status
+ * @returns A Resource
+ *
+ * @example
+ * ```typescript
+ * import { Pod } from "kubernetes-models/v1";
+ *
+ * const pod = new Pod({
+ *   metadata: { name: "my-pod" },
+ *   spec: { containers: [{ name: "app", image: "nginx" }] }
+ * });
+ *
+ * // Automatically calls toJSON() on the model object
+ * const resource = fromModel(pod);
+ * ```
+ */
+export function fromModel<T extends Record<string, unknown>>(
+  obj: { toJSON: () => T },
+  connectionDetails?: ConnectionDetails,
+  ready?: Ready,
+): Resource {
+  return fromObject(
+    obj.toJSON() as Record<string, unknown>,
+    connectionDetails,
+    ready,
+  );
 }
