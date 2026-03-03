@@ -1,6 +1,6 @@
 {
   "name": "@crossplane-org/function-sdk-typescript",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "A Crossplane Function SDK for Typescript",
   "keywords": [
     "crossplane",
@@ -58,7 +58,7 @@
     "prettier": "^3.7.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.52.0",
+    "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.16"
   }
 }

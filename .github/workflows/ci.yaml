@@ -70,7 +70,7 @@ jobs:
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
-          version: "33.0"
+          version: "33.4"
 
       - name: Generate Protobuf Files
         run: npm run protoc-gen
