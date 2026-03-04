@@ -1,17 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  fromModel,
-  fromObject,
-  toObject,
-  newDesiredComposed,
   asObject,
   asStruct,
-  mustStructObject,
-  mustStructJSON,
-  update,
+  fromModel,
+  fromObject,
   getCondition,
+  mustStructJSON,
+  mustStructObject,
+  newDesiredComposed,
+  toObject,
+  update,
 } from './resource.js';
-import { Resource, Ready } from '../proto/run_function.js';
+import { Ready, Resource } from '../proto/run_function.js';
 
 describe('fromModel', () => {
   it('should convert a kubernetes-models-like object with toJSON() method', () => {
@@ -414,7 +414,11 @@ describe('update', () => {
     });
 
     // ts-deepmerge merges arrays, so this will concatenate
-    expect(resource.resource?.spec).toBeDefined();
+    expect(resource.resource).toEqual({
+      spec: {
+        items: [1, 2, 3, 4, 5],
+      },
+    });
   });
 });
 

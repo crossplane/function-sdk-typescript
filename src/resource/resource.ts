@@ -253,14 +253,42 @@ export function update(r: Resource, source: Record<string, unknown> | Resource):
     r.resource = {};
   }
 
-  // If source is a Resource, extract its resource field
-  const sourceData =
-    'resource' in source && typeof source.resource === 'object'
-      ? (source as Resource).resource
-      : source;
+  // Detect genuine protobuf `Resource` instances by checking for protobuf-specific fields
+  // (the generated Resource interface includes `connectionDetails` and `ready`).
+  const isProtoResource =
+    typeof source === 'object' &&
+    source !== null &&
+    'resource' in source &&
+    typeof (source as { resource?: unknown }).resource === 'object' &&
+    ('connectionDetails' in source || 'ready' in source);
+
+  let sourceData: Record<string, unknown>;
+
+  if (isProtoResource) {
+    // Unwrap only genuine protobuf Resource instances
+    sourceData = (source as Resource).resource ?? {};
+  } else {
+    // Treat as plain object. If it has a top-level `resource` object (but isn't a
+    // protobuf Resource), merge both the `resource` field and any top-level
+    // `metadata` into the resource data so callers that pass plain objects keep
+    // expected semantics.
+    const srcObj = source as Record<string, unknown>;
+    if (srcObj && 'resource' in srcObj && typeof srcObj.resource === 'object') {
+      const resourcePart = srcObj.resource as Record<string, unknown>;
+      if ('metadata' in srcObj && typeof srcObj.metadata === 'object') {
+        sourceData = merge(resourcePart, {
+          metadata: srcObj.metadata,
+        }) as Record<string, unknown>;
+      } else {
+        sourceData = resourcePart;
+      }
+    } else {
+      sourceData = srcObj;
+    }
+  }
 
   // Perform deep merge
-  r.resource = merge(r.resource, sourceData as Record<string, unknown>) as Record<string, unknown>;
+  r.resource = merge(r.resource, sourceData) as Record<string, unknown>;
 }
 
 /**
