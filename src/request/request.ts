@@ -226,3 +226,149 @@ export function getCredentials(req: RunFunctionRequest, name: string): Credentia
   }
   return creds;
 }
+
+/**
+ * Get a required resource from the request by name.
+ *
+ * Required resources are resources that the function specified it needs using
+ * response.requireResource. Crossplane fetches the requested resources and includes
+ * them in the next request. The boolean return value indicates whether Crossplane
+ * has resolved the requirement.
+ *
+ * @param req - The RunFunctionRequest containing required resources
+ * @param name - The name of the required resource group to retrieve
+ * @returns A tuple of [resources, resolved, error]:
+ *   - resources: Array of Resource objects (empty if not found or error)
+ *   - resolved: true if Crossplane attempted to resolve the requirement, false otherwise
+ *   - error: Error if conversion failed, undefined otherwise
+ *
+ * @example
+ * ```typescript
+ * // After calling requireResource in a previous function invocation:
+ * const [resources, resolved, error] = getRequiredResource(req, "app-config");
+ * if (error) {
+ *   console.error("Failed to convert resources:", error);
+ * } else if (!resolved) {
+ *   console.log("Resource requirement not yet resolved by Crossplane");
+ * } else if (resources.length === 0) {
+ *   console.log("Resource requirement resolved but no resources found");
+ * } else {
+ *   console.log("Found resources:", resources);
+ *   resources.forEach(r => console.log(r.resource));
+ * }
+ * ```
+ */
+export function getRequiredResource(
+  req: RunFunctionRequest,
+  name: string
+): [Resource[], boolean, Error | undefined] {
+  if (!req.requiredResources) {
+    return [[], false, undefined];
+  }
+
+  const rrs = req.requiredResources[name];
+  if (!rrs) {
+    return [[], false, undefined];
+  }
+
+  const out: Resource[] = [];
+  for (const item of rrs.items || []) {
+    if (!item || !item.resource) {
+      continue;
+    }
+
+    out.push({
+      resource: item.resource,
+      connectionDetails: item.connectionDetails || {},
+      ready: item.ready || 0,
+    });
+  }
+
+  return [out, true, undefined];
+}
+
+/**
+ * Get all required schemas from the request.
+ *
+ * Returns all schemas that were requested using response.requireSchema and
+ * resolved by Crossplane. The map key corresponds to the name used in
+ * requireSchema. Each value is the OpenAPI v3 schema as an unstructured object,
+ * or undefined if the schema could not be found.
+ *
+ * @param req - The RunFunctionRequest containing required schemas
+ * @returns A map of schema names to OpenAPI v3 schema objects (or undefined if not found)
+ *
+ * @example
+ * ```typescript
+ * const schemas = getRequiredSchemas(req);
+ * for (const [name, schema] of Object.entries(schemas)) {
+ *   if (schema) {
+ *     console.log(`Schema ${name}:`, schema);
+ *   } else {
+ *     console.log(`Schema ${name} was requested but not found`);
+ *   }
+ * }
+ * ```
+ */
+export function getRequiredSchemas(
+  req: RunFunctionRequest
+): Record<string, Record<string, unknown> | undefined> {
+  const out: Record<string, Record<string, unknown> | undefined> = {};
+
+  if (!req.requiredSchemas) {
+    return out;
+  }
+
+  for (const [name, schema] of Object.entries(req.requiredSchemas)) {
+    out[name] = schema?.openapiV3;
+  }
+
+  return out;
+}
+
+/**
+ * Get a required schema from the request by name.
+ *
+ * Returns the OpenAPI v3 schema for a resource kind that was requested using
+ * response.requireSchema. The boolean return value indicates whether Crossplane
+ * has resolved the requirement.
+ *
+ * @param req - The RunFunctionRequest containing required schemas
+ * @param name - The name of the required schema to retrieve
+ * @returns A tuple of [schema, resolved]:
+ *   - schema: The OpenAPI v3 schema object, or undefined if not found
+ *   - resolved: true if Crossplane attempted to resolve the requirement, false otherwise
+ *
+ * Note: When resolved is true but schema is undefined, it means Crossplane tried
+ * to find the schema but it doesn't exist for that resource kind.
+ *
+ * @example
+ * ```typescript
+ * // After calling requireSchema in a previous function invocation:
+ * const [schema, resolved] = getRequiredSchema(req, "xr-schema");
+ * if (!resolved) {
+ *   console.log("Schema not yet resolved by Crossplane");
+ * } else if (!schema) {
+ *   console.log("Schema resolved but not found (kind may not exist)");
+ * } else {
+ *   console.log("Schema properties:", schema.properties);
+ *   console.log("Required fields:", schema.required);
+ * }
+ * ```
+ */
+export function getRequiredSchema(
+  req: RunFunctionRequest,
+  name: string
+): [Record<string, unknown> | undefined, boolean] {
+  const schemas = req.requiredSchemas;
+  if (!schemas) {
+    return [undefined, false];
+  }
+
+  const schema = schemas[name];
+  if (!schema) {
+    return [undefined, false];
+  }
+
+  return [schema.openapiV3, true];
+}

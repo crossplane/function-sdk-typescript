@@ -13,6 +13,9 @@ export {
   getInput,
   getContextKey,
   getRequiredResources,
+  getRequiredResource,
+  getRequiredSchema,
+  getRequiredSchemas,
   getCredentials,
 } from './request/request.js';
 
@@ -30,6 +33,8 @@ export {
   update,
   setContextKey,
   setOutput,
+  requireSchema,
+  requireResource,
   DEFAULT_TTL,
 } from './response/response.js';
 
@@ -72,6 +77,10 @@ export {
   Resources,
   Credentials,
   CredentialData,
+  Requirements,
+  ResourceSelector,
+  SchemaSelector,
+  Schema,
   FunctionRunnerServiceService,
 } from './proto/run_function.js';
 
