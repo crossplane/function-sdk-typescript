@@ -255,10 +255,7 @@ export function getCredentials(req: RunFunctionRequest, name: string): Credentia
  * }
  * ```
  */
-export function getRequiredResource(
-  req: RunFunctionRequest,
-  name: string
-): [Resource[], boolean] {
+export function getRequiredResource(req: RunFunctionRequest, name: string): [Resource[], boolean] {
   if (!req.requiredResources) {
     return [[], false];
   }

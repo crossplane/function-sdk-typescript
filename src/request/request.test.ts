@@ -741,10 +741,9 @@ describe('getRequiredResource', () => {
       requiredSchemas: {},
     };
 
-    const [resources, resolved, error] = getRequiredResource(req, 'test');
+    const [resources, resolved] = getRequiredResource(req, 'test');
     expect(resources).toEqual([]);
     expect(resolved).toBe(false);
-    expect(error).toBeUndefined();
   });
 
   it('should return empty array and false when resource not found', () => {
@@ -774,10 +773,9 @@ describe('getRequiredResource', () => {
       requiredSchemas: {},
     };
 
-    const [resources, resolved, error] = getRequiredResource(req, 'test');
+    const [resources, resolved] = getRequiredResource(req, 'test');
     expect(resources).toEqual([]);
     expect(resolved).toBe(false);
-    expect(error).toBeUndefined();
   });
 
   it('should return resources when found', () => {
@@ -808,8 +806,7 @@ describe('getRequiredResource', () => {
       requiredSchemas: {},
     };
 
-    const [resources, resolved, error] = getRequiredResource(req, 'test');
-    expect(error).toBeUndefined();
+    const [resources, resolved] = getRequiredResource(req, 'test');
     expect(resolved).toBe(true);
     expect(resources).toHaveLength(1);
     expect(resources[0]?.resource?.kind).toBe('ConfigMap');
@@ -853,8 +850,7 @@ describe('getRequiredResource', () => {
       requiredSchemas: {},
     };
 
-    const [resources, resolved, error] = getRequiredResource(req, 'secrets');
-    expect(error).toBeUndefined();
+    const [resources, resolved] = getRequiredResource(req, 'secrets');
     expect(resolved).toBe(true);
     expect(resources).toHaveLength(2);
     expect(resources[0]?.resource?.metadata?.name).toBe('secret-1');
@@ -878,8 +874,7 @@ describe('getRequiredResource', () => {
       requiredSchemas: {},
     };
 
-    const [resources, resolved, error] = getRequiredResource(req, 'empty');
-    expect(error).toBeUndefined();
+    const [resources, resolved] = getRequiredResource(req, 'empty');
     expect(resolved).toBe(true);
     expect(resources).toEqual([]);
   });
@@ -914,8 +909,7 @@ describe('getRequiredResource', () => {
       requiredSchemas: {},
     };
 
-    const [resources, resolved, error] = getRequiredResource(req, 'test');
-    expect(error).toBeUndefined();
+    const [resources, resolved] = getRequiredResource(req, 'test');
     expect(resolved).toBe(true);
     expect(resources).toHaveLength(1);
     expect(resources[0]?.connectionDetails?.username).toEqual(Buffer.from('admin'));

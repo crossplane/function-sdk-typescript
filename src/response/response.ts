@@ -475,7 +475,7 @@ export function setOutput(
  *
  * For CRDs, Crossplane returns the spec.versions[].schema.openAPIV3Schema field.
  * If Crossplane cannot find a schema for the requested kind, the schema will be
- * empty (getRequiredSchema will return null with ok true).
+ * empty (getRequiredSchema will return undefined with resolved true).
  *
  * @param rsp - The RunFunctionResponse to update
  * @param name - A unique name to identify this schema requirement
@@ -558,8 +558,8 @@ export function requireSchema(
  * });
  *
  * // In the next function invocation, retrieve the resources:
- * const [resources, ok] = getRequiredResource(req, "app-config");
- * if (ok && resources.length > 0) {
+ * const [resources, resolved, error] = getRequiredResource(req, "app-config");
+ * if (resolved && !error && resources.length > 0) {
  *   console.log("Found config:", resources[0].resource);
  * }
  * ```
