@@ -237,18 +237,15 @@ export function getCredentials(req: RunFunctionRequest, name: string): Credentia
  *
  * @param req - The RunFunctionRequest containing required resources
  * @param name - The name of the required resource group to retrieve
- * @returns A tuple of [resources, resolved, error]:
- *   - resources: Array of Resource objects (empty if not found or error)
+ * @returns A tuple of [resources, resolved]:
+ *   - resources: Array of Resource objects (empty if not found)
  *   - resolved: true if Crossplane attempted to resolve the requirement, false otherwise
- *   - error: Error if conversion failed, undefined otherwise
  *
  * @example
  * ```typescript
  * // After calling requireResource in a previous function invocation:
- * const [resources, resolved, error] = getRequiredResource(req, "app-config");
- * if (error) {
- *   console.error("Failed to convert resources:", error);
- * } else if (!resolved) {
+ * const [resources, resolved] = getRequiredResource(req, "app-config");
+ * if (!resolved) {
  *   console.log("Resource requirement not yet resolved by Crossplane");
  * } else if (resources.length === 0) {
  *   console.log("Resource requirement resolved but no resources found");
@@ -261,14 +258,14 @@ export function getCredentials(req: RunFunctionRequest, name: string): Credentia
 export function getRequiredResource(
   req: RunFunctionRequest,
   name: string
-): [Resource[], boolean, Error | undefined] {
+): [Resource[], boolean] {
   if (!req.requiredResources) {
-    return [[], false, undefined];
+    return [[], false];
   }
 
   const rrs = req.requiredResources[name];
   if (!rrs) {
-    return [[], false, undefined];
+    return [[], false];
   }
 
   const out: Resource[] = [];
@@ -284,7 +281,7 @@ export function getRequiredResource(
     });
   }
 
-  return [out, true, undefined];
+  return [out, true];
 }
 
 /**
