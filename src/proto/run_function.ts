@@ -23,6 +23,94 @@ import { Struct } from "./google/protobuf/struct.js";
 
 export const protobufPackage = "apiextensions.fn.proto.v1";
 
+/**
+ * Capability indicates that Crossplane supports a particular feature.
+ * Functions can check for capabilities to determine whether Crossplane will
+ * honor a particular request or response field.
+ */
+export enum Capability {
+  CAPABILITY_UNSPECIFIED = 0,
+  /**
+   * CAPABILITY_CAPABILITIES - Crossplane sends capabilities in RequestMeta. If this capability is
+   * present, the function knows that if another capability is absent, it's
+   * because Crossplane doesn't support it (not because Crossplane predates
+   * capability advertisement). Added in Crossplane v2.2.
+   */
+  CAPABILITY_CAPABILITIES = 1,
+  /**
+   * CAPABILITY_REQUIRED_RESOURCES - Crossplane supports the requirements.resources field. Functions can return
+   * resource requirements and Crossplane will fetch the requested resources and
+   * return them in required_resources. Added in Crossplane v1.15.
+   */
+  CAPABILITY_REQUIRED_RESOURCES = 2,
+  /**
+   * CAPABILITY_CREDENTIALS - Crossplane supports the credentials field. Functions can receive
+   * credentials from secrets specified in the Composition. Added in Crossplane
+   * v1.16.
+   */
+  CAPABILITY_CREDENTIALS = 3,
+  /**
+   * CAPABILITY_CONDITIONS - Crossplane supports the conditions field. Functions can return status
+   * conditions to be applied to the XR and optionally its claim. Added in
+   * Crossplane v1.17.
+   */
+  CAPABILITY_CONDITIONS = 4,
+  /**
+   * CAPABILITY_REQUIRED_SCHEMAS - Crossplane supports the requirements.schemas field. Functions can request
+   * OpenAPI schemas and Crossplane will return them in required_schemas. Added
+   * in Crossplane v2.2.
+   */
+  CAPABILITY_REQUIRED_SCHEMAS = 5,
+  UNRECOGNIZED = -1,
+}
+
+export function capabilityFromJSON(object: any): Capability {
+  switch (object) {
+    case 0:
+    case "CAPABILITY_UNSPECIFIED":
+      return Capability.CAPABILITY_UNSPECIFIED;
+    case 1:
+    case "CAPABILITY_CAPABILITIES":
+      return Capability.CAPABILITY_CAPABILITIES;
+    case 2:
+    case "CAPABILITY_REQUIRED_RESOURCES":
+      return Capability.CAPABILITY_REQUIRED_RESOURCES;
+    case 3:
+    case "CAPABILITY_CREDENTIALS":
+      return Capability.CAPABILITY_CREDENTIALS;
+    case 4:
+    case "CAPABILITY_CONDITIONS":
+      return Capability.CAPABILITY_CONDITIONS;
+    case 5:
+    case "CAPABILITY_REQUIRED_SCHEMAS":
+      return Capability.CAPABILITY_REQUIRED_SCHEMAS;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return Capability.UNRECOGNIZED;
+  }
+}
+
+export function capabilityToJSON(object: Capability): string {
+  switch (object) {
+    case Capability.CAPABILITY_UNSPECIFIED:
+      return "CAPABILITY_UNSPECIFIED";
+    case Capability.CAPABILITY_CAPABILITIES:
+      return "CAPABILITY_CAPABILITIES";
+    case Capability.CAPABILITY_REQUIRED_RESOURCES:
+      return "CAPABILITY_REQUIRED_RESOURCES";
+    case Capability.CAPABILITY_CREDENTIALS:
+      return "CAPABILITY_CREDENTIALS";
+    case Capability.CAPABILITY_CONDITIONS:
+      return "CAPABILITY_CONDITIONS";
+    case Capability.CAPABILITY_REQUIRED_SCHEMAS:
+      return "CAPABILITY_REQUIRED_SCHEMAS";
+    case Capability.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 /** Ready indicates whether a resource should be considered ready. */
 export enum Ready {
   READY_UNSPECIFIED = 0,
@@ -293,6 +381,14 @@ export interface RunFunctionRequest {
    * resources in its requirements.
    */
   requiredResources: { [key: string]: Resources };
+  /**
+   * Optional schemas that the function specified in its requirements. The map
+   * key corresponds to the key in a RunFunctionResponse's requirements.schemas
+   * field. If a function requested a schema that could not be found, Crossplane
+   * sets the map key to an empty Schema message to indicate that it attempted
+   * to satisfy the request.
+   */
+  requiredSchemas: { [key: string]: Schema };
 }
 
 export interface RunFunctionRequest_ExtraResourcesEntry {
@@ -308,6 +404,11 @@ export interface RunFunctionRequest_CredentialsEntry {
 export interface RunFunctionRequest_RequiredResourcesEntry {
   key: string;
   value: Resources | undefined;
+}
+
+export interface RunFunctionRequest_RequiredSchemasEntry {
+  key: string;
+  value: Schema | undefined;
 }
 
 /** Credentials that a function may use to communicate with an external system. */
@@ -388,6 +489,12 @@ export interface RequestMeta {
    * be otherwise identical.
    */
   tag: string;
+  /**
+   * Capabilities supported by this version of Crossplane. Functions may use
+   * this to determine whether Crossplane will honor certain fields in their
+   * response, or populate certain fields in their request.
+   */
+  capabilities: Capability[];
 }
 
 /** Requirements that must be satisfied for a function to run successfully. */
@@ -406,6 +513,11 @@ export interface Requirements {
    * group of resources.
    */
   resources: { [key: string]: ResourceSelector };
+  /**
+   * Schemas that this function requires. The map key uniquely identifies the
+   * schema request.
+   */
+  schemas: { [key: string]: SchemaSelector };
 }
 
 export interface Requirements_ExtraResourcesEntry {
@@ -416,6 +528,29 @@ export interface Requirements_ExtraResourcesEntry {
 export interface Requirements_ResourcesEntry {
   key: string;
   value: ResourceSelector | undefined;
+}
+
+export interface Requirements_SchemasEntry {
+  key: string;
+  value: SchemaSelector | undefined;
+}
+
+/** SchemaSelector identifies a resource kind whose OpenAPI schema is requested. */
+export interface SchemaSelector {
+  /** API version of the resource kind, e.g. "example.org/v1". */
+  apiVersion: string;
+  /** Kind of resource, e.g. "MyResource". */
+  kind: string;
+}
+
+/** Schema represents the OpenAPI schema for a resource kind. */
+export interface Schema {
+  /**
+   * The OpenAPI v3 schema of the resource kind as unstructured JSON.
+   * For CRDs this is the spec.versions[].schema.openAPIV3Schema field.
+   * Empty if Crossplane could not find a schema for the requested kind.
+   */
+  openapiV3?: { [key: string]: any } | undefined;
 }
 
 /** ResourceSelector selects a group of resources, either by name or by label. */
@@ -513,7 +648,7 @@ export interface Resource {
    * the observed connection details of a composite or composed resource.
    *
    * * A function should set this field in a RunFunctionResponse to indicate the
-   * desired connection details of the XR.
+   * desired connection details of legacy XRs. For modern XRs, this will be ignored.
    *
    * * A function should not set this field in a RunFunctionResponse to indicate
    * the desired connection details of a composed resource. This will be
@@ -534,7 +669,7 @@ export interface Resource {
    * * A function should set this field to READY_TRUE in a RunFunctionResponse
    * to indicate that a desired XR is ready. This overwrites the standard
    * readiness detection that determines the ready state of the composite by the
-   * ready state of the the composed resources.
+   * ready state of the composed resources.
    *
    * Ready is only used for composition. It's ignored by Operations.
    */
@@ -603,6 +738,7 @@ function createBaseRunFunctionRequest(): RunFunctionRequest {
     extraResources: {},
     credentials: {},
     requiredResources: {},
+    requiredSchemas: {},
   };
 }
 
@@ -631,6 +767,9 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
     });
     globalThis.Object.entries(message.requiredResources).forEach(([key, value]: [string, Resources]) => {
       RunFunctionRequest_RequiredResourcesEntry.encode({ key: key as any, value }, writer.uint32(66).fork()).join();
+    });
+    globalThis.Object.entries(message.requiredSchemas).forEach(([key, value]: [string, Schema]) => {
+      RunFunctionRequest_RequiredSchemasEntry.encode({ key: key as any, value }, writer.uint32(74).fork()).join();
     });
     return writer;
   },
@@ -715,6 +854,17 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
           }
           continue;
         }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          const entry9 = RunFunctionRequest_RequiredSchemasEntry.decode(reader, reader.uint32());
+          if (entry9.value !== undefined) {
+            message.requiredSchemas[entry9.key] = entry9.value;
+          }
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -774,6 +924,23 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
           {},
         )
         : {},
+      requiredSchemas: isObject(object.requiredSchemas)
+        ? (globalThis.Object.entries(object.requiredSchemas) as [string, any][]).reduce(
+          (acc: { [key: string]: Schema }, [key, value]: [string, any]) => {
+            acc[key] = Schema.fromJSON(value);
+            return acc;
+          },
+          {},
+        )
+        : isObject(object.required_schemas)
+        ? (globalThis.Object.entries(object.required_schemas) as [string, any][]).reduce(
+          (acc: { [key: string]: Schema }, [key, value]: [string, any]) => {
+            acc[key] = Schema.fromJSON(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
     };
   },
 
@@ -821,6 +988,15 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
         });
       }
     }
+    if (message.requiredSchemas) {
+      const entries = globalThis.Object.entries(message.requiredSchemas) as [string, Schema][];
+      if (entries.length > 0) {
+        obj.requiredSchemas = {};
+        entries.forEach(([k, v]) => {
+          obj.requiredSchemas[k] = Schema.toJSON(v);
+        });
+      }
+    }
     return obj;
   },
 
@@ -865,6 +1041,15 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
         }
         return acc;
       }, {});
+    message.requiredSchemas = (globalThis.Object.entries(object.requiredSchemas ?? {}) as [string, Schema][]).reduce(
+      (acc: { [key: string]: Schema }, [key, value]: [string, Schema]) => {
+        if (value !== undefined) {
+          acc[key] = Schema.fromPartial(value);
+        }
+        return acc;
+      },
+      {},
+    );
     return message;
   },
 };
@@ -1110,6 +1295,88 @@ export const RunFunctionRequest_RequiredResourcesEntry: MessageFns<RunFunctionRe
     message.key = object.key ?? "";
     message.value = (object.value !== undefined && object.value !== null)
       ? Resources.fromPartial(object.value)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseRunFunctionRequest_RequiredSchemasEntry(): RunFunctionRequest_RequiredSchemasEntry {
+  return { key: "", value: undefined };
+}
+
+export const RunFunctionRequest_RequiredSchemasEntry: MessageFns<RunFunctionRequest_RequiredSchemasEntry> = {
+  encode(message: RunFunctionRequest_RequiredSchemasEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== undefined) {
+      Schema.encode(message.value, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RunFunctionRequest_RequiredSchemasEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRunFunctionRequest_RequiredSchemasEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = Schema.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): RunFunctionRequest_RequiredSchemasEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? Schema.fromJSON(object.value) : undefined,
+    };
+  },
+
+  toJSON(message: RunFunctionRequest_RequiredSchemasEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== undefined) {
+      obj.value = Schema.toJSON(message.value);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<RunFunctionRequest_RequiredSchemasEntry>, I>>(
+    base?: I,
+  ): RunFunctionRequest_RequiredSchemasEntry {
+    return RunFunctionRequest_RequiredSchemasEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<RunFunctionRequest_RequiredSchemasEntry>, I>>(
+    object: I,
+  ): RunFunctionRequest_RequiredSchemasEntry {
+    const message = createBaseRunFunctionRequest_RequiredSchemasEntry();
+    message.key = object.key ?? "";
+    message.value = (object.value !== undefined && object.value !== null)
+      ? Schema.fromPartial(object.value)
       : undefined;
     return message;
   },
@@ -1573,7 +1840,7 @@ export const RunFunctionResponse: MessageFns<RunFunctionResponse> = {
 };
 
 function createBaseRequestMeta(): RequestMeta {
-  return { tag: "" };
+  return { tag: "", capabilities: [] };
 }
 
 export const RequestMeta: MessageFns<RequestMeta> = {
@@ -1581,6 +1848,11 @@ export const RequestMeta: MessageFns<RequestMeta> = {
     if (message.tag !== "") {
       writer.uint32(10).string(message.tag);
     }
+    writer.uint32(18).fork();
+    for (const v of message.capabilities) {
+      writer.int32(v);
+    }
+    writer.join();
     return writer;
   },
 
@@ -1599,6 +1871,24 @@ export const RequestMeta: MessageFns<RequestMeta> = {
           message.tag = reader.string();
           continue;
         }
+        case 2: {
+          if (tag === 16) {
+            message.capabilities.push(reader.int32() as any);
+
+            continue;
+          }
+
+          if (tag === 18) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.capabilities.push(reader.int32() as any);
+            }
+
+            continue;
+          }
+
+          break;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1609,13 +1899,21 @@ export const RequestMeta: MessageFns<RequestMeta> = {
   },
 
   fromJSON(object: any): RequestMeta {
-    return { tag: isSet(object.tag) ? globalThis.String(object.tag) : "" };
+    return {
+      tag: isSet(object.tag) ? globalThis.String(object.tag) : "",
+      capabilities: globalThis.Array.isArray(object?.capabilities)
+        ? object.capabilities.map((e: any) => capabilityFromJSON(e))
+        : [],
+    };
   },
 
   toJSON(message: RequestMeta): unknown {
     const obj: any = {};
     if (message.tag !== "") {
       obj.tag = message.tag;
+    }
+    if (message.capabilities?.length) {
+      obj.capabilities = message.capabilities.map((e) => capabilityToJSON(e));
     }
     return obj;
   },
@@ -1626,12 +1924,13 @@ export const RequestMeta: MessageFns<RequestMeta> = {
   fromPartial<I extends Exact<DeepPartial<RequestMeta>, I>>(object: I): RequestMeta {
     const message = createBaseRequestMeta();
     message.tag = object.tag ?? "";
+    message.capabilities = object.capabilities?.map((e) => e) || [];
     return message;
   },
 };
 
 function createBaseRequirements(): Requirements {
-  return { extraResources: {}, resources: {} };
+  return { extraResources: {}, resources: {}, schemas: {} };
 }
 
 export const Requirements: MessageFns<Requirements> = {
@@ -1641,6 +1940,9 @@ export const Requirements: MessageFns<Requirements> = {
     });
     globalThis.Object.entries(message.resources).forEach(([key, value]: [string, ResourceSelector]) => {
       Requirements_ResourcesEntry.encode({ key: key as any, value }, writer.uint32(18).fork()).join();
+    });
+    globalThis.Object.entries(message.schemas).forEach(([key, value]: [string, SchemaSelector]) => {
+      Requirements_SchemasEntry.encode({ key: key as any, value }, writer.uint32(26).fork()).join();
     });
     return writer;
   },
@@ -1671,6 +1973,17 @@ export const Requirements: MessageFns<Requirements> = {
           const entry2 = Requirements_ResourcesEntry.decode(reader, reader.uint32());
           if (entry2.value !== undefined) {
             message.resources[entry2.key] = entry2.value;
+          }
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          const entry3 = Requirements_SchemasEntry.decode(reader, reader.uint32());
+          if (entry3.value !== undefined) {
+            message.schemas[entry3.key] = entry3.value;
           }
           continue;
         }
@@ -1711,6 +2024,15 @@ export const Requirements: MessageFns<Requirements> = {
           {},
         )
         : {},
+      schemas: isObject(object.schemas)
+        ? (globalThis.Object.entries(object.schemas) as [string, any][]).reduce(
+          (acc: { [key: string]: SchemaSelector }, [key, value]: [string, any]) => {
+            acc[key] = SchemaSelector.fromJSON(value);
+            return acc;
+          },
+          {},
+        )
+        : {},
     };
   },
 
@@ -1734,6 +2056,15 @@ export const Requirements: MessageFns<Requirements> = {
         });
       }
     }
+    if (message.schemas) {
+      const entries = globalThis.Object.entries(message.schemas) as [string, SchemaSelector][];
+      if (entries.length > 0) {
+        obj.schemas = {};
+        entries.forEach(([k, v]) => {
+          obj.schemas[k] = SchemaSelector.toJSON(v);
+        });
+      }
+    }
     return obj;
   },
 
@@ -1753,6 +2084,15 @@ export const Requirements: MessageFns<Requirements> = {
       (acc: { [key: string]: ResourceSelector }, [key, value]: [string, ResourceSelector]) => {
         if (value !== undefined) {
           acc[key] = ResourceSelector.fromPartial(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.schemas = (globalThis.Object.entries(object.schemas ?? {}) as [string, SchemaSelector][]).reduce(
+      (acc: { [key: string]: SchemaSelector }, [key, value]: [string, SchemaSelector]) => {
+        if (value !== undefined) {
+          acc[key] = SchemaSelector.fromPartial(value);
         }
         return acc;
       },
@@ -1918,6 +2258,228 @@ export const Requirements_ResourcesEntry: MessageFns<Requirements_ResourcesEntry
     message.value = (object.value !== undefined && object.value !== null)
       ? ResourceSelector.fromPartial(object.value)
       : undefined;
+    return message;
+  },
+};
+
+function createBaseRequirements_SchemasEntry(): Requirements_SchemasEntry {
+  return { key: "", value: undefined };
+}
+
+export const Requirements_SchemasEntry: MessageFns<Requirements_SchemasEntry> = {
+  encode(message: Requirements_SchemasEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== undefined) {
+      SchemaSelector.encode(message.value, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Requirements_SchemasEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRequirements_SchemasEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = SchemaSelector.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Requirements_SchemasEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? SchemaSelector.fromJSON(object.value) : undefined,
+    };
+  },
+
+  toJSON(message: Requirements_SchemasEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== undefined) {
+      obj.value = SchemaSelector.toJSON(message.value);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Requirements_SchemasEntry>, I>>(base?: I): Requirements_SchemasEntry {
+    return Requirements_SchemasEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Requirements_SchemasEntry>, I>>(object: I): Requirements_SchemasEntry {
+    const message = createBaseRequirements_SchemasEntry();
+    message.key = object.key ?? "";
+    message.value = (object.value !== undefined && object.value !== null)
+      ? SchemaSelector.fromPartial(object.value)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseSchemaSelector(): SchemaSelector {
+  return { apiVersion: "", kind: "" };
+}
+
+export const SchemaSelector: MessageFns<SchemaSelector> = {
+  encode(message: SchemaSelector, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.apiVersion !== "") {
+      writer.uint32(10).string(message.apiVersion);
+    }
+    if (message.kind !== "") {
+      writer.uint32(18).string(message.kind);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SchemaSelector {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSchemaSelector();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.apiVersion = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.kind = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): SchemaSelector {
+    return {
+      apiVersion: isSet(object.apiVersion)
+        ? globalThis.String(object.apiVersion)
+        : isSet(object.api_version)
+        ? globalThis.String(object.api_version)
+        : "",
+      kind: isSet(object.kind) ? globalThis.String(object.kind) : "",
+    };
+  },
+
+  toJSON(message: SchemaSelector): unknown {
+    const obj: any = {};
+    if (message.apiVersion !== "") {
+      obj.apiVersion = message.apiVersion;
+    }
+    if (message.kind !== "") {
+      obj.kind = message.kind;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<SchemaSelector>, I>>(base?: I): SchemaSelector {
+    return SchemaSelector.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<SchemaSelector>, I>>(object: I): SchemaSelector {
+    const message = createBaseSchemaSelector();
+    message.apiVersion = object.apiVersion ?? "";
+    message.kind = object.kind ?? "";
+    return message;
+  },
+};
+
+function createBaseSchema(): Schema {
+  return { openapiV3: undefined };
+}
+
+export const Schema: MessageFns<Schema> = {
+  encode(message: Schema, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.openapiV3 !== undefined) {
+      Struct.encode(Struct.wrap(message.openapiV3), writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Schema {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSchema();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.openapiV3 = Struct.unwrap(Struct.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Schema {
+    return {
+      openapiV3: isObject(object.openapiV3)
+        ? object.openapiV3
+        : isObject(object.openapi_v3)
+        ? object.openapi_v3
+        : undefined,
+    };
+  },
+
+  toJSON(message: Schema): unknown {
+    const obj: any = {};
+    if (message.openapiV3 !== undefined) {
+      obj.openapiV3 = message.openapiV3;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Schema>, I>>(base?: I): Schema {
+    return Schema.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Schema>, I>>(object: I): Schema {
+    const message = createBaseSchema();
+    message.openapiV3 = object.openapiV3 ?? undefined;
     return message;
   },
 };

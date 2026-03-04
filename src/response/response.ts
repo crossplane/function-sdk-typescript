@@ -12,6 +12,7 @@ import {
   RunFunctionResponse,
   Severity,
   Ready,
+  ResourceSelector,
 } from '../proto/run_function.js';
 import { Duration } from '../proto/google/protobuf/duration.js';
 import { merge } from 'ts-deepmerge';
@@ -462,5 +463,122 @@ export function setOutput(
   output: Record<string, unknown>
 ): RunFunctionResponse {
   rsp.output = output;
+  return rsp;
+}
+
+/**
+ * Add a schema requirement to the response.
+ *
+ * This tells Crossplane to fetch the OpenAPI schema for the specified resource kind
+ * and include it in the next request's required_schemas field. Use request.getRequiredSchema
+ * to retrieve the resolved schema.
+ *
+ * For CRDs, Crossplane returns the spec.versions[].schema.openAPIV3Schema field.
+ * If Crossplane cannot find a schema for the requested kind, the schema will be
+ * empty (getRequiredSchema will return undefined with resolved true).
+ *
+ * @param rsp - The RunFunctionResponse to update
+ * @param name - A unique name to identify this schema requirement
+ * @param apiVersion - API version of the resource kind (e.g., "example.org/v1")
+ * @param kind - Kind of resource (e.g., "MyResource")
+ * @returns The updated response
+ *
+ * @example
+ * ```typescript
+ * // Request the OpenAPI schema for an XR type
+ * rsp = requireSchema(rsp, "xr-schema", "example.org/v1", "MyResource");
+ *
+ * // In the next function invocation, retrieve the schema:
+ * const [schema, ok] = getRequiredSchema(req, "xr-schema");
+ * if (ok && schema) {
+ *   console.log("Schema properties:", schema.properties);
+ * }
+ * ```
+ */
+export function requireSchema(
+  rsp: RunFunctionResponse,
+  name: string,
+  apiVersion: string,
+  kind: string
+): RunFunctionResponse {
+  if (!rsp.requirements) {
+    rsp.requirements = {
+      extraResources: {},
+      resources: {},
+      schemas: {},
+    };
+  }
+  if (!rsp.requirements.schemas) {
+    rsp.requirements.schemas = {};
+  }
+  rsp.requirements.schemas[name] = {
+    apiVersion,
+    kind,
+  };
+  return rsp;
+}
+
+/**
+ * Add a resource requirement to the response.
+ *
+ * This tells Crossplane to fetch resources matching the selector and include them
+ * in the next request's required_resources field. Use request.getRequiredResource
+ * to retrieve the resolved resources.
+ *
+ * The selector can match resources by name or by labels. If namespace is omitted,
+ * cluster-scoped resources are matched, or namespaced resources across all namespaces
+ * when matching by labels.
+ *
+ * @param rsp - The RunFunctionResponse to update
+ * @param name - A unique name to identify this resource requirement
+ * @param selector - The resource selector specifying which resources to fetch
+ * @returns The updated response
+ *
+ * @example
+ * ```typescript
+ * // Match a specific ConfigMap by name
+ * rsp = requireResource(rsp, "app-config", {
+ *   apiVersion: "v1",
+ *   kind: "ConfigMap",
+ *   matchName: "my-app-config",
+ *   namespace: "production"
+ * });
+ *
+ * // Match all Secrets with specific labels
+ * rsp = requireResource(rsp, "db-secrets", {
+ *   apiVersion: "v1",
+ *   kind: "Secret",
+ *   matchLabels: {
+ *     labels: {
+ *       app: "database",
+ *       tier: "backend"
+ *     }
+ *   },
+ *   namespace: "production"
+ * });
+ *
+ * // In the next function invocation, retrieve the resources:
+ * const [resources, resolved, error] = getRequiredResource(req, "app-config");
+ * if (resolved && !error && resources.length > 0) {
+ *   console.log("Found config:", resources[0].resource);
+ * }
+ * ```
+ */
+export function requireResource(
+  rsp: RunFunctionResponse,
+  name: string,
+  selector: ResourceSelector
+): RunFunctionResponse {
+  if (!rsp.requirements) {
+    rsp.requirements = {
+      extraResources: {},
+      resources: {},
+      schemas: {},
+    };
+  }
+  if (!rsp.requirements.resources) {
+    rsp.requirements.resources = {};
+  }
+  rsp.requirements.resources[name] = selector;
   return rsp;
 }

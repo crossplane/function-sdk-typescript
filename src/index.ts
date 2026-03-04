@@ -6,73 +6,83 @@ export { FunctionRunner, getServer } from './function/function.js';
 
 // Request helpers
 export {
-  getDesiredCompositeResource,
-  getObservedCompositeResource,
-  getDesiredComposedResources,
-  getObservedComposedResources,
-  getInput,
   getContextKey,
-  getRequiredResources,
   getCredentials,
+  getDesiredComposedResources,
+  getDesiredCompositeResource,
+  getInput,
+  getObservedComposedResources,
+  getObservedCompositeResource,
+  getRequiredResource,
+  getRequiredResources,
+  getRequiredSchema,
+  getRequiredSchemas,
 } from './request/request.js';
 
 // Response helpers
 export {
-  to,
+  DEFAULT_TTL,
   fatal,
   normal,
-  warning,
-  setDesiredComposedResources,
-  setDesiredResources,
-  setDesiredCompositeStatus,
-  setDesiredCompositeResource,
-  updateDesiredComposedResources,
-  update,
+  requireResource,
+  requireSchema,
   setContextKey,
+  setDesiredComposedResources,
+  setDesiredCompositeResource,
+  setDesiredCompositeStatus,
+  setDesiredResources,
   setOutput,
-  DEFAULT_TTL,
+  to,
+  update,
+  updateDesiredComposedResources,
+  warning,
 } from './response/response.js';
 
 // Resource utilities
 export {
   asObject,
   asStruct,
-  fromObject,
-  fromModel,
-  toObject,
-  newDesiredComposed,
-  mustStructObject,
-  mustStructJSON,
   type Composite,
-  type ObservedComposed,
-  type DesiredComposed,
   type ConnectionDetails,
+  type DesiredComposed,
+  fromModel,
+  fromObject,
+  mustStructJSON,
+  mustStructObject,
+  newDesiredComposed,
+  type ObservedComposed,
+  toObject,
 } from './resource/resource.js';
 
 // Runtime utilities
 export {
-  newGrpcServer,
-  startServer,
   getServerCredentials,
+  newGrpcServer,
   type ServerOptions,
+  startServer,
 } from './runtime/runtime.js';
 
 // Protocol buffer types
 export {
+  Capability,
+  Condition,
+  CredentialData,
+  Credentials,
+  FunctionRunnerServiceService,
+  Ready,
+  Requirements,
+  Resource,
+  Resources,
+  ResourceSelector,
+  Result,
   RunFunctionRequest,
   RunFunctionResponse,
-  Resource,
+  Schema,
+  SchemaSelector,
   Severity,
-  Result,
   State,
-  Ready,
-  Target,
   Status,
-  Condition,
-  Resources,
-  Credentials,
-  CredentialData,
-  FunctionRunnerServiceService,
+  Target,
 } from './proto/run_function.js';
 
 export type { Logger } from 'pino';

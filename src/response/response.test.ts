@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { setDesiredCompositeStatus, setDesiredResources } from './response.js';
+import {
+  setDesiredCompositeStatus,
+  setDesiredResources,
+  requireSchema,
+  requireResource,
+} from './response.js';
 import type { RunFunctionResponse } from '../proto/run_function.js';
 import { Ready } from '../proto/run_function.js';
 
@@ -437,5 +442,291 @@ describe('setDesiredResources', () => {
 
     expect(result.desired?.resources).toBeDefined();
     expect(Object.keys(result.desired?.resources || {})).toHaveLength(0);
+  });
+});
+
+describe('requireSchema', () => {
+  it('should add a schema requirement to an empty response', () => {
+    const rsp: RunFunctionResponse = {
+      conditions: [],
+      context: undefined,
+      desired: undefined,
+      meta: { tag: '', ttl: { seconds: 60, nanos: 0 } },
+      requirements: undefined,
+      results: [],
+    };
+
+    const result = requireSchema(rsp, 'xr-schema', 'example.org/v1', 'MyResource');
+
+    expect(result.requirements).toBeDefined();
+    expect(result.requirements?.schemas).toBeDefined();
+    expect(result.requirements?.schemas?.['xr-schema']).toEqual({
+      apiVersion: 'example.org/v1',
+      kind: 'MyResource',
+    });
+  });
+
+  it('should add a schema requirement when requirements already exist', () => {
+    const rsp: RunFunctionResponse = {
+      conditions: [],
+      context: undefined,
+      desired: undefined,
+      meta: { tag: '', ttl: { seconds: 60, nanos: 0 } },
+      requirements: {
+        extraResources: {},
+        resources: {
+          'existing-resource': {
+            apiVersion: 'v1',
+            kind: 'ConfigMap',
+            matchName: 'my-config',
+          },
+        },
+        schemas: {},
+      },
+      results: [],
+    };
+
+    const result = requireSchema(rsp, 'composite-schema', 'database.example.org/v1', 'Database');
+
+    expect(result.requirements?.resources?.['existing-resource']).toBeDefined();
+    expect(result.requirements?.schemas?.['composite-schema']).toEqual({
+      apiVersion: 'database.example.org/v1',
+      kind: 'Database',
+    });
+  });
+
+  it('should add multiple schema requirements', () => {
+    const rsp: RunFunctionResponse = {
+      conditions: [],
+      context: undefined,
+      desired: undefined,
+      meta: { tag: '', ttl: { seconds: 60, nanos: 0 } },
+      requirements: undefined,
+      results: [],
+    };
+
+    let result = requireSchema(rsp, 'xr-schema', 'example.org/v1', 'XR');
+    result = requireSchema(result, 'composed-schema', 'example.org/v1', 'ComposedResource');
+    result = requireSchema(result, 'claim-schema', 'example.org/v1', 'Claim');
+
+    expect(Object.keys(result.requirements?.schemas || {})).toHaveLength(3);
+    expect(result.requirements?.schemas?.['xr-schema']?.kind).toBe('XR');
+    expect(result.requirements?.schemas?.['composed-schema']?.kind).toBe('ComposedResource');
+    expect(result.requirements?.schemas?.['claim-schema']?.kind).toBe('Claim');
+  });
+
+  it('should overwrite existing schema requirement with same name', () => {
+    const rsp: RunFunctionResponse = {
+      conditions: [],
+      context: undefined,
+      desired: undefined,
+      meta: { tag: '', ttl: { seconds: 60, nanos: 0 } },
+      requirements: {
+        extraResources: {},
+        resources: {},
+        schemas: {
+          'my-schema': {
+            apiVersion: 'old.example.org/v1',
+            kind: 'OldKind',
+          },
+        },
+      },
+      results: [],
+    };
+
+    const result = requireSchema(rsp, 'my-schema', 'new.example.org/v2', 'NewKind');
+
+    expect(result.requirements?.schemas?.['my-schema']).toEqual({
+      apiVersion: 'new.example.org/v2',
+      kind: 'NewKind',
+    });
+  });
+});
+
+describe('requireResource', () => {
+  it('should add a resource requirement by name', () => {
+    const rsp: RunFunctionResponse = {
+      conditions: [],
+      context: undefined,
+      desired: undefined,
+      meta: { tag: '', ttl: { seconds: 60, nanos: 0 } },
+      requirements: undefined,
+      results: [],
+    };
+
+    const result = requireResource(rsp, 'app-config', {
+      apiVersion: 'v1',
+      kind: 'ConfigMap',
+      matchName: 'my-app-config',
+      namespace: 'production',
+    });
+
+    expect(result.requirements).toBeDefined();
+    expect(result.requirements?.resources).toBeDefined();
+    expect(result.requirements?.resources?.['app-config']).toEqual({
+      apiVersion: 'v1',
+      kind: 'ConfigMap',
+      matchName: 'my-app-config',
+      namespace: 'production',
+    });
+  });
+
+  it('should add a resource requirement by labels', () => {
+    const rsp: RunFunctionResponse = {
+      conditions: [],
+      context: undefined,
+      desired: undefined,
+      meta: { tag: '', ttl: { seconds: 60, nanos: 0 } },
+      requirements: undefined,
+      results: [],
+    };
+
+    const result = requireResource(rsp, 'db-secrets', {
+      apiVersion: 'v1',
+      kind: 'Secret',
+      matchLabels: {
+        labels: {
+          app: 'database',
+          tier: 'backend',
+        },
+      },
+      namespace: 'production',
+    });
+
+    expect(result.requirements?.resources?.['db-secrets']).toEqual({
+      apiVersion: 'v1',
+      kind: 'Secret',
+      matchLabels: {
+        labels: {
+          app: 'database',
+          tier: 'backend',
+        },
+      },
+      namespace: 'production',
+    });
+  });
+
+  it('should add multiple resource requirements', () => {
+    const rsp: RunFunctionResponse = {
+      conditions: [],
+      context: undefined,
+      desired: undefined,
+      meta: { tag: '', ttl: { seconds: 60, nanos: 0 } },
+      requirements: undefined,
+      results: [],
+    };
+
+    let result = requireResource(rsp, 'config', {
+      apiVersion: 'v1',
+      kind: 'ConfigMap',
+      matchName: 'app-config',
+    });
+
+    result = requireResource(result, 'secret', {
+      apiVersion: 'v1',
+      kind: 'Secret',
+      matchName: 'app-secret',
+    });
+
+    expect(Object.keys(result.requirements?.resources || {})).toHaveLength(2);
+    expect(result.requirements?.resources?.['config']?.kind).toBe('ConfigMap');
+    expect(result.requirements?.resources?.['secret']?.kind).toBe('Secret');
+  });
+
+  it('should add resource requirement when schemas already exist', () => {
+    const rsp: RunFunctionResponse = {
+      conditions: [],
+      context: undefined,
+      desired: undefined,
+      meta: { tag: '', ttl: { seconds: 60, nanos: 0 } },
+      requirements: {
+        extraResources: {},
+        resources: {},
+        schemas: {
+          'existing-schema': {
+            apiVersion: 'example.org/v1',
+            kind: 'MyKind',
+          },
+        },
+      },
+      results: [],
+    };
+
+    const result = requireResource(rsp, 'namespaces', {
+      apiVersion: 'v1',
+      kind: 'Namespace',
+      matchLabels: {
+        labels: {
+          environment: 'production',
+        },
+      },
+    });
+
+    expect(result.requirements?.schemas?.['existing-schema']).toBeDefined();
+    expect(result.requirements?.resources?.['namespaces']).toEqual({
+      apiVersion: 'v1',
+      kind: 'Namespace',
+      matchLabels: {
+        labels: {
+          environment: 'production',
+        },
+      },
+    });
+  });
+
+  it('should handle cluster-scoped resources without namespace', () => {
+    const rsp: RunFunctionResponse = {
+      conditions: [],
+      context: undefined,
+      desired: undefined,
+      meta: { tag: '', ttl: { seconds: 60, nanos: 0 } },
+      requirements: undefined,
+      results: [],
+    };
+
+    const result = requireResource(rsp, 'all-namespaces', {
+      apiVersion: 'v1',
+      kind: 'Namespace',
+      matchLabels: {
+        labels: {
+          managed: 'true',
+        },
+      },
+    });
+
+    expect(result.requirements?.resources?.['all-namespaces']?.namespace).toBeUndefined();
+  });
+
+  it('should overwrite existing resource requirement with same name', () => {
+    const rsp: RunFunctionResponse = {
+      conditions: [],
+      context: undefined,
+      desired: undefined,
+      meta: { tag: '', ttl: { seconds: 60, nanos: 0 } },
+      requirements: {
+        extraResources: {},
+        resources: {
+          'my-resource': {
+            apiVersion: 'v1',
+            kind: 'ConfigMap',
+            matchName: 'old-config',
+          },
+        },
+        schemas: {},
+      },
+      results: [],
+    };
+
+    const result = requireResource(rsp, 'my-resource', {
+      apiVersion: 'v1',
+      kind: 'Secret',
+      matchName: 'new-secret',
+    });
+
+    expect(result.requirements?.resources?.['my-resource']).toEqual({
+      apiVersion: 'v1',
+      kind: 'Secret',
+      matchName: 'new-secret',
+    });
   });
 });

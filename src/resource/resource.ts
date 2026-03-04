@@ -190,5 +190,7 @@ export function fromModel<T extends Record<string, unknown>>(
   connectionDetails?: ConnectionDetails,
   ready?: Ready
 ): Resource {
-  return fromObject(obj.toJSON() as Record<string, unknown>, connectionDetails, ready);
+  // T already extends Record<string, unknown>, so the cast is unnecessary.
+  // Pass the result directly to fromObject which accepts T via its signature.
+  return fromObject(obj.toJSON(), connectionDetails, ready);
 }

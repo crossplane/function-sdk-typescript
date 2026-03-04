@@ -8,6 +8,9 @@ import {
   getContextKey,
   getRequiredResources,
   getCredentials,
+  getRequiredResource,
+  getRequiredSchema,
+  getRequiredSchemas,
 } from './request.js';
 import type {
   RunFunctionRequest,
@@ -27,6 +30,7 @@ describe('getDesiredCompositeResource', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getDesiredCompositeResource(req);
@@ -46,6 +50,7 @@ describe('getDesiredCompositeResource', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getDesiredCompositeResource(req);
@@ -79,6 +84,7 @@ describe('getDesiredCompositeResource', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getDesiredCompositeResource(req);
@@ -98,6 +104,7 @@ describe('getObservedCompositeResource', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getObservedCompositeResource(req);
@@ -131,6 +138,7 @@ describe('getObservedCompositeResource', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getObservedCompositeResource(req);
@@ -150,6 +158,7 @@ describe('getDesiredComposedResources', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getDesiredComposedResources(req);
@@ -170,6 +179,7 @@ describe('getDesiredComposedResources', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getDesiredComposedResources(req);
@@ -214,6 +224,7 @@ describe('getDesiredComposedResources', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getDesiredComposedResources(req);
@@ -235,6 +246,7 @@ describe('getObservedComposedResources', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getObservedComposedResources(req);
@@ -274,6 +286,7 @@ describe('getObservedComposedResources', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getObservedComposedResources(req);
@@ -294,6 +307,7 @@ describe('getInput', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getInput(req);
@@ -319,12 +333,13 @@ describe('getInput', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getInput(req);
     expect(result).toEqual(input);
-    expect(result?.spec?.region).toBe('us-west-2');
-    expect(result?.spec?.replicas).toBe(3);
+    expect((result as any)?.spec?.region).toBe('us-west-2');
+    expect((result as any)?.spec?.replicas).toBe(3);
   });
 
   it('should handle empty input object', () => {
@@ -337,6 +352,7 @@ describe('getInput', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getInput(req);
@@ -355,6 +371,7 @@ describe('getContextKey', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const [value, found] = getContextKey(req, 'apiserver-kind');
@@ -374,6 +391,7 @@ describe('getContextKey', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const [value, found] = getContextKey(req, 'non-existent-key');
@@ -399,6 +417,7 @@ describe('getContextKey', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const [kind, kindFound] = getContextKey(req, 'apiserver-kind');
@@ -427,6 +446,7 @@ describe('getContextKey', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const [nullValue, nullFound] = getContextKey(req, 'null-value');
@@ -450,6 +470,7 @@ describe('getRequiredResources', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getRequiredResources(req);
@@ -485,6 +506,7 @@ describe('getRequiredResources', () => {
       requiredResources: {
         namespaces: resources,
       },
+      requiredSchemas: {},
     };
 
     const result = getRequiredResources(req);
@@ -534,6 +556,7 @@ describe('getRequiredResources', () => {
       requiredResources: {
         'config-and-secrets': resources,
       },
+      requiredSchemas: {},
     };
 
     const result = getRequiredResources(req);
@@ -557,6 +580,7 @@ describe('getRequiredResources', () => {
         group2: { items: [] },
         group3: { items: [] },
       },
+      requiredSchemas: {},
     };
 
     const result = getRequiredResources(req);
@@ -578,6 +602,7 @@ describe('getCredentials', () => {
       extraResources: {},
       credentials: {},
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     expect(() => getCredentials(req, 'aws-creds')).toThrow('credentials "aws-creds" not found');
@@ -601,6 +626,7 @@ describe('getCredentials', () => {
         },
       },
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     expect(() => getCredentials(req, 'aws-creds')).toThrow('credentials "aws-creds" not found');
@@ -627,6 +653,7 @@ describe('getCredentials', () => {
         'aws-creds': awsCreds,
       },
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getCredentials(req, 'aws-creds');
@@ -661,6 +688,7 @@ describe('getCredentials', () => {
         },
       },
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const awsResult = getCredentials(req, 'aws-creds');
@@ -690,10 +718,391 @@ describe('getCredentials', () => {
         },
       },
       requiredResources: {},
+      requiredSchemas: {},
     };
 
     const result = getCredentials(req, 'empty-creds');
     expect(result).toBeDefined();
     expect(result?.credentialData?.data).toEqual({});
+  });
+});
+
+describe('getRequiredResource', () => {
+  it('should return empty array and false when no required resources exist', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    const [resources, resolved] = getRequiredResource(req, 'test');
+    expect(resources).toEqual([]);
+    expect(resolved).toBe(false);
+  });
+
+  it('should return empty array and false when resource not found', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {
+        other: {
+          items: [
+            {
+              resource: {
+                apiVersion: 'v1',
+                kind: 'ConfigMap',
+                metadata: { name: 'other-config' },
+              },
+              connectionDetails: {},
+              ready: 0,
+            },
+          ],
+        },
+      },
+      requiredSchemas: {},
+    };
+
+    const [resources, resolved] = getRequiredResource(req, 'test');
+    expect(resources).toEqual([]);
+    expect(resolved).toBe(false);
+  });
+
+  it('should return resources when found', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {
+        test: {
+          items: [
+            {
+              resource: {
+                apiVersion: 'v1',
+                kind: 'ConfigMap',
+                metadata: { name: 'test-config' },
+                data: { key: 'value' },
+              },
+              connectionDetails: {},
+              ready: 0,
+            },
+          ],
+        },
+      },
+      requiredSchemas: {},
+    };
+
+    const [resources, resolved] = getRequiredResource(req, 'test');
+    expect(resolved).toBe(true);
+    expect(resources).toHaveLength(1);
+    expect(resources[0]?.resource?.kind).toBe('ConfigMap');
+    expect(resources[0]?.resource?.metadata?.name).toBe('test-config');
+    expect(resources[0]?.resource?.data?.key).toBe('value');
+  });
+
+  it('should return multiple resources when found', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {
+        secrets: {
+          items: [
+            {
+              resource: {
+                apiVersion: 'v1',
+                kind: 'Secret',
+                metadata: { name: 'secret-1', namespace: 'default' },
+              },
+              connectionDetails: {},
+              ready: 0,
+            },
+            {
+              resource: {
+                apiVersion: 'v1',
+                kind: 'Secret',
+                metadata: { name: 'secret-2', namespace: 'default' },
+              },
+              connectionDetails: {},
+              ready: 0,
+            },
+          ],
+        },
+      },
+      requiredSchemas: {},
+    };
+
+    const [resources, resolved] = getRequiredResource(req, 'secrets');
+    expect(resolved).toBe(true);
+    expect(resources).toHaveLength(2);
+    expect(resources[0]?.resource?.metadata?.name).toBe('secret-1');
+    expect(resources[1]?.resource?.metadata?.name).toBe('secret-2');
+  });
+
+  it('should handle empty items array', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {
+        empty: {
+          items: [],
+        },
+      },
+      requiredSchemas: {},
+    };
+
+    const [resources, resolved] = getRequiredResource(req, 'empty');
+    expect(resolved).toBe(true);
+    expect(resources).toEqual([]);
+  });
+
+  it('should preserve connection details and ready status', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {
+        test: {
+          items: [
+            {
+              resource: {
+                apiVersion: 'v1',
+                kind: 'Secret',
+                metadata: { name: 'test-secret' },
+              },
+              connectionDetails: {
+                username: Buffer.from('admin'),
+                password: Buffer.from('secret'),
+              },
+              ready: 2, // READY_TRUE
+            },
+          ],
+        },
+      },
+      requiredSchemas: {},
+    };
+
+    const [resources, resolved] = getRequiredResource(req, 'test');
+    expect(resolved).toBe(true);
+    expect(resources).toHaveLength(1);
+    expect(resources[0]?.connectionDetails?.username).toEqual(Buffer.from('admin'));
+    expect(resources[0]?.connectionDetails?.password).toEqual(Buffer.from('secret'));
+    expect(resources[0]?.ready).toBe(2);
+  });
+});
+
+describe('getRequiredSchemas', () => {
+  it('should return empty object when no required schemas exist', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    const result = getRequiredSchemas(req);
+    expect(result).toEqual({});
+    expect(Object.keys(result)).toHaveLength(0);
+  });
+
+  it('should return all schemas', () => {
+    const xrSchema = {
+      type: 'object',
+      properties: {
+        spec: { type: 'object' },
+      },
+    };
+
+    const composedSchema = {
+      type: 'object',
+      properties: {
+        metadata: { type: 'object' },
+      },
+    };
+
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {
+        'xr-schema': {
+          openapiV3: xrSchema,
+        },
+        'composed-schema': {
+          openapiV3: composedSchema,
+        },
+      },
+    };
+
+    const result = getRequiredSchemas(req);
+    expect(Object.keys(result)).toHaveLength(2);
+    expect(result['xr-schema']).toEqual(xrSchema);
+    expect(result['composed-schema']).toEqual(composedSchema);
+  });
+
+  it('should handle undefined schemas', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {
+        'found-schema': {
+          openapiV3: { type: 'object' },
+        },
+        'not-found-schema': {
+          openapiV3: undefined,
+        },
+      },
+    };
+
+    const result = getRequiredSchemas(req);
+    expect(Object.keys(result)).toHaveLength(2);
+    expect(result['found-schema']).toEqual({ type: 'object' });
+    expect(result['not-found-schema']).toBeUndefined();
+  });
+});
+
+describe('getRequiredSchema', () => {
+  it('should return undefined and false when no required schemas exist', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    const [schema, resolved] = getRequiredSchema(req, 'test');
+    expect(schema).toBeUndefined();
+    expect(resolved).toBe(false);
+  });
+
+  it('should return undefined and false when schema not found', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {
+        other: {
+          openapiV3: { type: 'object' },
+        },
+      },
+    };
+
+    const [schema, resolved] = getRequiredSchema(req, 'test');
+    expect(schema).toBeUndefined();
+    expect(resolved).toBe(false);
+  });
+
+  it('should return schema and true when found', () => {
+    const xrSchema = {
+      type: 'object',
+      properties: {
+        apiVersion: { type: 'string' },
+        kind: { type: 'string' },
+        spec: {
+          type: 'object',
+          properties: {
+            region: { type: 'string' },
+          },
+        },
+      },
+      required: ['apiVersion', 'kind', 'spec'],
+    };
+
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {
+        'xr-schema': {
+          openapiV3: xrSchema,
+        },
+      },
+    };
+
+    const [schema, resolved] = getRequiredSchema(req, 'xr-schema');
+    expect(resolved).toBe(true);
+    expect(schema).toEqual(xrSchema);
+    expect((schema as any)?.type).toBe('object');
+    expect((schema as any)?.properties?.spec?.properties?.region?.type).toBe('string');
+  });
+
+  it('should return undefined and true when schema was requested but not found', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {
+        'not-found': {
+          openapiV3: undefined,
+        },
+      },
+    };
+
+    const [schema, resolved] = getRequiredSchema(req, 'not-found');
+    expect(resolved).toBe(true);
+    expect(schema).toBeUndefined();
   });
 });
