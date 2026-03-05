@@ -398,7 +398,7 @@ describe('update', () => {
     });
   });
 
-  it('should overwrite arrays rather than merging them', () => {
+  it('should replace arrays by default (Python SDK behavior)', () => {
     const resource = Resource.fromJSON({
       resource: {
         spec: {
@@ -413,10 +413,115 @@ describe('update', () => {
       },
     });
 
-    // ts-deepmerge merges arrays, so this will concatenate
+    // Default behavior: arrays are replaced, not concatenated
+    expect(resource.resource).toEqual({
+      spec: {
+        items: [4, 5],
+      },
+    });
+  });
+
+  it('should concatenate arrays when mergeArrays is true', () => {
+    const resource = Resource.fromJSON({
+      resource: {
+        spec: {
+          items: [1, 2, 3],
+        },
+      },
+    });
+
+    update(
+      resource,
+      {
+        spec: {
+          items: [4, 5],
+        },
+      },
+      { mergeArrays: true }
+    );
+
+    // With mergeArrays: true, arrays are concatenated
     expect(resource.resource).toEqual({
       spec: {
         items: [1, 2, 3, 4, 5],
+      },
+    });
+  });
+
+  it('should replace tags array by default', () => {
+    const resource = Resource.fromJSON({
+      resource: {
+        spec: {
+          forProvider: {
+            tags: ['env:dev', 'team:backend'],
+          },
+        },
+      },
+    });
+
+    update(resource, {
+      spec: {
+        forProvider: {
+          tags: ['env:prod', 'team:platform'],
+        },
+      },
+    });
+
+    expect(resource.resource).toEqual({
+      spec: {
+        forProvider: {
+          tags: ['env:prod', 'team:platform'],
+        },
+      },
+    });
+  });
+
+  it('should replace finalizers array', () => {
+    const resource = Resource.fromJSON({
+      resource: {
+        metadata: {
+          name: 'test-resource',
+          finalizers: ['finalizer.example.com/cleanup'],
+        },
+      },
+    });
+
+    update(resource, {
+      metadata: {
+        finalizers: ['finalizer.example.com/new-cleanup'],
+      },
+    });
+
+    expect(resource.resource).toEqual({
+      metadata: {
+        name: 'test-resource',
+        finalizers: ['finalizer.example.com/new-cleanup'],
+      },
+    });
+  });
+
+  it('should handle nested arrays correctly', () => {
+    const resource = Resource.fromJSON({
+      resource: {
+        spec: {
+          containers: [
+            { name: 'app', image: 'app:v1' },
+            { name: 'sidecar', image: 'sidecar:v1' },
+          ],
+        },
+      },
+    });
+
+    update(resource, {
+      spec: {
+        containers: [{ name: 'app', image: 'app:v2' }],
+      },
+    });
+
+    // Arrays are replaced, not merged
+    expect(resource.resource).toEqual({
+      spec: {
+        containers: [{ name: 'app', image: 'app:v2' }],
       },
     });
   });

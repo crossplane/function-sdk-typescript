@@ -1,6 +1,6 @@
 // Resource utilities for working with Kubernetes resources and protobuf conversion
-import { Ready, Resource } from '../proto/run_function.js';
-import { merge } from 'ts-deepmerge';
+import { Ready, Resource } from "../proto/run_function.js";
+import { merge } from "ts-deepmerge";
 
 // Type aliases for better readability
 export type ConnectionDetails = { [key: string]: Buffer };
@@ -19,6 +19,19 @@ export interface Condition {
   message?: string;
   /** The last time the condition transitioned to this status */
   lastTransitionTime?: string;
+}
+
+/**
+ * Options for controlling merge behavior when updating resources
+ */
+export interface MergeOptions {
+  /**
+   * Whether to merge arrays by concatenation (true) or replace them (false).
+   * Default is false.
+   *
+   * @default false
+   */
+  mergeArrays?: boolean;
 }
 
 /**
@@ -68,7 +81,9 @@ export function newDesiredComposed(): DesiredComposed {
  * @param struct - The protobuf Struct to convert
  * @returns A plain JavaScript object representing the Kubernetes resource
  */
-export function asObject(struct: Record<string, unknown> | undefined): Record<string, unknown> {
+export function asObject(
+  struct: Record<string, unknown> | undefined,
+): Record<string, unknown> {
   if (!struct) {
     return {};
   }
@@ -90,7 +105,9 @@ export function asObject(struct: Record<string, unknown> | undefined): Record<st
  * @param obj - The plain JavaScript object to convert
  * @returns A protobuf Struct representation
  */
-export function asStruct(obj: Record<string, unknown>): Record<string, unknown> {
+export function asStruct(
+  obj: Record<string, unknown>,
+): Record<string, unknown> {
   // In our TypeScript implementation, this is essentially a pass-through
   // The actual conversion happens in the protobuf serialization layer
   return obj;
@@ -109,14 +126,16 @@ export function asStruct(obj: Record<string, unknown>): Record<string, unknown> 
  * @returns A Struct representation
  * @throws Error if conversion fails
  */
-export function mustStructObject(obj: Record<string, unknown>): Record<string, unknown> {
+export function mustStructObject(
+  obj: Record<string, unknown>,
+): Record<string, unknown> {
   try {
     return asStruct(obj);
   } catch (error) {
     throw new Error(
       `Failed to convert object to struct: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
     );
   }
 }
@@ -140,7 +159,9 @@ export function mustStructJSON(json: string): Record<string, unknown> {
     return asStruct(obj);
   } catch (error) {
     throw new Error(
-      `Failed to parse JSON to struct: ${error instanceof Error ? error.message : String(error)}`
+      `Failed to parse JSON to struct: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     );
   }
 }
@@ -157,7 +178,7 @@ export function mustStructJSON(json: string): Record<string, unknown> {
 export function fromObject(
   obj: Record<string, unknown>,
   connectionDetails?: ConnectionDetails,
-  ready?: Ready
+  ready?: Ready,
 ): Resource {
   return Resource.fromJSON({
     resource: obj,
@@ -173,7 +194,9 @@ export function fromObject(
  * @param resource - The Resource to extract from
  * @returns The plain JavaScript object, or undefined if not present
  */
-export function toObject(resource: Resource): Record<string, unknown> | undefined {
+export function toObject(
+  resource: Resource,
+): Record<string, unknown> | undefined {
   return resource.resource;
 }
 
@@ -205,7 +228,7 @@ export function toObject(resource: Resource): Record<string, unknown> | undefine
 export function fromModel<T extends Record<string, unknown>>(
   obj: { toJSON: () => T },
   connectionDetails?: ConnectionDetails,
-  ready?: Ready
+  ready?: Ready,
 ): Resource {
   // T already extends Record<string, unknown>, so the cast is unnecessary.
   // Pass the result directly to fromObject which accepts T via its signature.
@@ -220,47 +243,68 @@ export function fromModel<T extends Record<string, unknown>>(
  * a plain JavaScript object, a protobuf Struct (Record<string, unknown>), or a
  * Resource object.
  *
- * The merge semantics are similar to a dictionary's update method: fields that don't
- * exist will be added, and fields that exist will be overwritten.
+ * The merge semantics match the Python SDK's behavior (similar to a dictionary's
+ * update method): fields that don't exist will be added, and fields that exist will
+ * be overwritten. By default, arrays are replaced rather than concatenated to match
+ * Python SDK behavior.
  *
  * @param r - The Resource to update
  * @param source - The source data to merge (plain object, Struct, or Resource)
+ * @param options - Optional merge configuration (default: { mergeArrays: false })
  *
  * @example
  * ```typescript
  * const bucket = getDesiredComposedResources(req)["my-bucket"];
  * if (bucket) {
  *   // Update specific fields while preserving others
+ *   // Arrays are replaced by default (Python SDK behavior)
  *   update(bucket, {
  *     resource: {
  *       spec: {
  *         forProvider: {
  *           region: "us-west-2",
- *           tags: { environment: "production" }
+ *           tags: ["env:prod", "team:platform"]  // Replaces existing tags
  *         }
  *       }
  *     }
  *   });
  * }
  *
+ * // Optionally concatenate arrays instead of replacing them
+ * update(bucket, {
+ *   resource: {
+ *     spec: {
+ *       forProvider: {
+ *         tags: ["new-tag"]  // Will be appended to existing tags
+ *       }
+ *     }
+ *   }
+ * }, { mergeArrays: true });
+ *
  * // You can also merge from another Resource
  * const template = Resource.fromJSON({ resource: templateConfig });
  * update(bucket, template);
  * ```
  */
-export function update(r: Resource, source: Record<string, unknown> | Resource): void {
+export function update(
+  r: Resource,
+  source: Record<string, unknown> | Resource,
+  options?: MergeOptions,
+): void {
   if (!r.resource) {
     r.resource = {};
   }
 
+  // Default to Python SDK behavior: replace arrays rather than concatenating
+  const mergeArrays = options?.mergeArrays ?? false;
+
   // Detect genuine protobuf `Resource` instances by checking for protobuf-specific fields
   // (the generated Resource interface includes `connectionDetails` and `ready`).
-  const isProtoResource =
-    typeof source === 'object' &&
+  const isProtoResource = typeof source === "object" &&
     source !== null &&
-    'resource' in source &&
-    typeof (source as { resource?: unknown }).resource === 'object' &&
-    ('connectionDetails' in source || 'ready' in source);
+    "resource" in source &&
+    typeof (source as { resource?: unknown }).resource === "object" &&
+    ("connectionDetails" in source || "ready" in source);
 
   let sourceData: Record<string, unknown>;
 
@@ -273,10 +317,10 @@ export function update(r: Resource, source: Record<string, unknown> | Resource):
     // `metadata` into the resource data so callers that pass plain objects keep
     // expected semantics.
     const srcObj = source as Record<string, unknown>;
-    if (srcObj && 'resource' in srcObj && typeof srcObj.resource === 'object') {
+    if (srcObj && "resource" in srcObj && typeof srcObj.resource === "object") {
       const resourcePart = srcObj.resource as Record<string, unknown>;
-      if ('metadata' in srcObj && typeof srcObj.metadata === 'object') {
-        sourceData = merge(resourcePart, {
+      if ("metadata" in srcObj && typeof srcObj.metadata === "object") {
+        sourceData = merge.withOptions({ mergeArrays }, resourcePart, {
           metadata: srcObj.metadata,
         }) as Record<string, unknown>;
       } else {
@@ -287,8 +331,15 @@ export function update(r: Resource, source: Record<string, unknown> | Resource):
     }
   }
 
-  // Perform deep merge
-  r.resource = merge(r.resource, sourceData) as Record<string, unknown>;
+  // Perform deep merge with configured array handling
+  r.resource = merge.withOptions(
+    { mergeArrays },
+    r.resource,
+    sourceData,
+  ) as Record<
+    string,
+    unknown
+  >;
 }
 
 /**
@@ -326,20 +377,22 @@ export function update(r: Resource, source: Record<string, unknown> | Resource):
  */
 export function getCondition(
   resource: Record<string, unknown> | undefined,
-  type: string
+  type: string,
 ): Condition {
-  const unknown: Condition = { type, status: 'Unknown' };
+  const unknown: Condition = { type, status: "Unknown" };
 
-  if (!resource || !('status' in resource)) {
+  if (!resource || !("status" in resource)) {
     return unknown;
   }
 
   const status = resource.status as Record<string, unknown> | undefined;
-  if (!status || !('conditions' in status)) {
+  if (!status || !("conditions" in status)) {
     return unknown;
   }
 
-  const conditions = status.conditions as Array<Record<string, unknown>> | undefined;
+  const conditions = status.conditions as
+    | Array<Record<string, unknown>>
+    | undefined;
   if (!Array.isArray(conditions)) {
     return unknown;
   }
@@ -355,16 +408,19 @@ export function getCondition(
     };
 
     if (c.message !== undefined && c.message !== null) {
-      condition.message = typeof c.message === 'string' ? c.message : JSON.stringify(c.message);
+      condition.message = typeof c.message === "string"
+        ? c.message
+        : JSON.stringify(c.message);
     }
     if (c.reason !== undefined && c.reason !== null) {
-      condition.reason = typeof c.reason === 'string' ? c.reason : JSON.stringify(c.reason);
+      condition.reason = typeof c.reason === "string"
+        ? c.reason
+        : JSON.stringify(c.reason);
     }
     if (c.lastTransitionTime !== undefined && c.lastTransitionTime !== null) {
-      condition.lastTransitionTime =
-        typeof c.lastTransitionTime === 'string'
-          ? c.lastTransitionTime
-          : JSON.stringify(c.lastTransitionTime);
+      condition.lastTransitionTime = typeof c.lastTransitionTime === "string"
+        ? c.lastTransitionTime
+        : JSON.stringify(c.lastTransitionTime);
     }
 
     return condition;

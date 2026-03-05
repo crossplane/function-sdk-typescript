@@ -52,6 +52,7 @@ export {
   fromModel,
   fromObject,
   getCondition,
+  type MergeOptions,
   mustStructJSON,
   mustStructObject,
   newDesiredComposed,
