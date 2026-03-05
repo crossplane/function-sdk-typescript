@@ -224,8 +224,14 @@ import {
     getObservedComposedResources,
     getInput,
     getContextKey,
+    getRequiredResource,
     getRequiredResources,
+    getRequiredSchema,
+    getRequiredSchemas,
     getCredentials,
+    advertiseCapabilities,
+    hasCapability,
+    Capability,
 } from "@crossplane-org/function-sdk-typescript";
 
 // Get the observed composite resource (XR)
@@ -246,11 +252,28 @@ const input = getInput(req);
 // Get context value from previous function
 const [value, exists] = getContextKey(req, "my-key");
 
-// Get required resources
+// Get a specific required resource by name
+const [resources, resolved] = getRequiredResource(req, "app-config");
+
+// Get all required resources
 const required = getRequiredResources(req);
+
+// Get a specific required schema by name
+const [schema, resolved] = getRequiredSchema(req, "xr-schema");
+
+// Get all required schemas
+const schemas = getRequiredSchemas(req);
 
 // Get credentials
 const creds = getCredentials(req, "aws-creds");
+
+// Check if Crossplane advertises capabilities (v2.2+)
+if (advertiseCapabilities(req)) {
+    // Check for specific capability support
+    if (hasCapability(req, Capability.CAPABILITY_REQUIRED_RESOURCES)) {
+        // Use required resources feature
+    }
+}
 ```
 
 #### Response Helpers
@@ -268,7 +291,8 @@ import {
     normal,
     fatal,
     warning,
-    update,
+    requireResource,
+    requireSchema,
     DEFAULT_TTL,
 } from "@crossplane-org/function-sdk-typescript";
 
@@ -295,8 +319,16 @@ normal(rsp, "Success message");
 warning(rsp, "Warning message");
 fatal(rsp, "Fatal error message");
 
-// Update a resource by merging
-const updated = update(sourceResource, targetResource);
+// Request Crossplane fetch a resource (available in next invocation)
+rsp = requireResource(rsp, "app-config", {
+    apiVersion: "v1",
+    kind: "ConfigMap",
+    matchName: "my-config",
+    namespace: "default"
+});
+
+// Request Crossplane fetch a schema (available in next invocation)
+rsp = requireSchema(rsp, "xr-schema", "example.org/v1", "MyResource");
 ```
 
 #### Resource Helpers
@@ -311,6 +343,8 @@ import {
     fromObject,
     toObject,
     newDesiredComposed,
+    update,
+    getCondition,
 } from "@crossplane-org/function-sdk-typescript";
 
 // Create a Resource from a plain object
@@ -329,6 +363,35 @@ const plainObj = asObject(struct);
 
 // Create a new empty DesiredComposed resource
 const desired = newDesiredComposed();
+
+// Deep merge updates into a resource (arrays replaced by default)
+update(resource, {
+    resource: {
+        spec: {
+            forProvider: {
+                region: "us-west-2",
+                tags: ["env:prod"]  // Replaces existing tags
+            }
+        }
+    }
+});
+
+// Or merge with array concatenation
+update(resource, {
+    resource: {
+        spec: {
+            forProvider: {
+                tags: ["new-tag"]  // Appended to existing tags
+            }
+        }
+    }
+}, { mergeArrays: true });
+
+// Get a status condition from a resource
+const readyCondition = getCondition(resource.resource, "Ready");
+if (readyCondition.status === "True") {
+    console.log("Resource is ready");
+}
 ```
 
 ### Error Handling
@@ -519,6 +582,10 @@ import {
     ObservedComposed,
     DesiredComposed,
     ConnectionDetails,
+    MergeOptions,
+
+    // Status condition types
+    Condition as ResourceCondition,
 
     // Protocol buffer types
     Severity,
@@ -531,6 +598,11 @@ import {
     Resources,
     Credentials,
     CredentialData,
+    Requirements,
+    ResourceSelector,
+    SchemaSelector,
+    Schema,
+    Capability,
 
     // Runtime types
     ServerOptions,
@@ -539,21 +611,43 @@ import {
 
 ### Core Functions
 
+#### Response Functions
+
 - **`to(req, ttl?)`** - Initialize a response from a request
 - **`normal(rsp, message)`** - Add a normal (info) result
 - **`warning(rsp, message)`** - Add a warning result
 - **`fatal(rsp, message)`** - Add a fatal error result
+- **`setDesiredComposedResources(rsp, resources)`** - Set desired composed resources
+- **`setDesiredCompositeStatus({rsp, status})`** - Update XR status
+- **`setContextKey(rsp, key, value)`** - Set context for next function
+- **`setOutput(rsp, output)`** - Set function output
+- **`requireResource(rsp, name, selector)`** - Request Crossplane fetch resources
+- **`requireSchema(rsp, name, apiVersion, kind)`** - Request Crossplane fetch schemas
+
+#### Request Functions
+
 - **`getObservedCompositeResource(req)`** - Get the observed XR
 - **`getDesiredCompositeResource(req)`** - Get the desired XR
 - **`getDesiredComposedResources(req)`** - Get desired composed resources
 - **`getObservedComposedResources(req)`** - Get observed composed resources
-- **`setDesiredComposedResources(rsp, resources)`** - Set desired composed resources
-- **`setDesiredCompositeStatus({rsp, status})`** - Update XR status
-- **`setContextKey(rsp, key, value)`** - Set context for next function
 - **`getContextKey(req, key)`** - Get context from previous function
 - **`getInput(req)`** - Get function input configuration
-- **`getRequiredResources(req)`** - Get required resources
+- **`getRequiredResource(req, name)`** - Get a required resource by name
+- **`getRequiredResources(req)`** - Get all required resources
+- **`getRequiredSchema(req, name)`** - Get a required schema by name
+- **`getRequiredSchemas(req)`** - Get all required schemas
 - **`getCredentials(req, name)`** - Get credentials by name (throws error if not found)
+- **`advertiseCapabilities(req)`** - Check if Crossplane advertises capabilities
+- **`hasCapability(req, capability)`** - Check for a specific capability
+
+#### Resource Functions
+
+- **`fromObject(obj, connectionDetails?, ready?)`** - Create Resource from plain object
+- **`fromModel(model, connectionDetails?, ready?)`** - Create Resource from kubernetes-models
+- **`toObject(resource)`** - Extract plain object from Resource
+- **`update(resource, source, options?)`** - Deep merge data into a Resource
+- **`getCondition(resource, type)`** - Extract a status condition by type
+- **`newDesiredComposed()`** - Create an empty DesiredComposed resource
 
 See [USAGE.md](USAGE.md) for detailed API documentation and examples.
 
