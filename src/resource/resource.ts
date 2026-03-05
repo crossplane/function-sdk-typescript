@@ -308,9 +308,20 @@ export function update(
     // `metadata` into the resource data so callers that pass plain objects keep
     // expected semantics.
     const srcObj = source as Record<string, unknown>;
-    if (srcObj && 'resource' in srcObj && typeof srcObj.resource === 'object') {
+    if (
+      srcObj &&
+      'resource' in srcObj &&
+      typeof srcObj.resource === 'object' &&
+      srcObj.resource !== null &&
+      !Array.isArray(srcObj.resource)
+    ) {
       const resourcePart = srcObj.resource as Record<string, unknown>;
-      if ('metadata' in srcObj && typeof srcObj.metadata === 'object') {
+      if (
+        'metadata' in srcObj &&
+        typeof srcObj.metadata === 'object' &&
+        srcObj.metadata !== null &&
+        !Array.isArray(srcObj.metadata)
+      ) {
         sourceData = merge.withOptions({ mergeArrays }, resourcePart, {
           metadata: srcObj.metadata,
         }) as Record<string, unknown>;
