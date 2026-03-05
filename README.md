@@ -633,7 +633,7 @@ import {
 - **`getContextKey(req, key)`** - Get context from previous function
 - **`getInput(req)`** - Get function input configuration
 - **`getRequiredResource(req, name)`** - Get a required resource by name
-- **`getRequiredResources(req)`** - Get all required resources (deprecated)
+- **`getRequiredResources(req)`** - Get all required resources
 - **`getRequiredSchema(req, name)`** - Get a required schema by name
 - **`getRequiredSchemas(req)`** - Get all required schemas
 - **`getCredentials(req, name)`** - Get credentials by name (throws error if not found)
