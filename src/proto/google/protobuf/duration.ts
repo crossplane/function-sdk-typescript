@@ -6,6 +6,7 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
+import { messageTypeRegistry } from "../../typeRegistry.js";
 
 export const protobufPackage = "google.protobuf";
 
@@ -70,6 +71,7 @@ export const protobufPackage = "google.protobuf";
  * microsecond should be expressed in JSON format as "3.000001s".
  */
 export interface Duration {
+  $type: "google.protobuf.Duration";
   /**
    * Signed seconds of the span of time. Must be from -315,576,000,000
    * to +315,576,000,000 inclusive. Note: these bounds are computed from:
@@ -88,10 +90,12 @@ export interface Duration {
 }
 
 function createBaseDuration(): Duration {
-  return { seconds: 0, nanos: 0 };
+  return { $type: "google.protobuf.Duration", seconds: 0, nanos: 0 };
 }
 
-export const Duration: MessageFns<Duration> = {
+export const Duration: MessageFns<Duration, "google.protobuf.Duration"> = {
+  $type: "google.protobuf.Duration" as const,
+
   encode(message: Duration, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.seconds !== 0) {
       writer.uint32(8).int64(message.seconds);
@@ -136,6 +140,7 @@ export const Duration: MessageFns<Duration> = {
 
   fromJSON(object: any): Duration {
     return {
+      $type: Duration.$type,
       seconds: isSet(object.seconds) ? globalThis.Number(object.seconds) : 0,
       nanos: isSet(object.nanos) ? globalThis.Number(object.nanos) : 0,
     };
@@ -163,6 +168,8 @@ export const Duration: MessageFns<Duration> = {
   },
 };
 
+messageTypeRegistry.set(Duration.$type, Duration);
+
 export interface DataLoaderOptions {
   cache?: boolean;
 }
@@ -177,12 +184,12 @@ type Builtin = Date | Function | Uint8Array | string | number | boolean | undefi
 export type DeepPartial<T> = T extends Builtin ? T
   : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
   : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
-  : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
+  : T extends {} ? { [K in Exclude<keyof T, "$type">]?: DeepPartial<T[K]> }
   : Partial<T>;
 
 type KeysOfUnion<T> = T extends T ? keyof T : never;
 export type Exact<P, I extends P> = P extends Builtin ? P
-  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
+  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P> | "$type">]: never };
 
 function longToNumber(int64: { toString(): string }): number {
   const num = globalThis.Number(int64.toString());
@@ -199,7 +206,8 @@ function isSet(value: any): boolean {
   return value !== null && value !== undefined;
 }
 
-export interface MessageFns<T> {
+export interface MessageFns<T, V extends string> {
+  readonly $type: V;
   encode(message: T, writer?: BinaryWriter): BinaryWriter;
   decode(input: BinaryReader | Uint8Array, length?: number): T;
   fromJSON(object: any): T;

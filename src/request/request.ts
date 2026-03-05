@@ -277,11 +277,13 @@ export function getRequiredResource(req: RunFunctionRequest, name: string): [Res
       continue;
     }
 
-    out.push({
-      resource: item.resource,
-      connectionDetails: item.connectionDetails || {},
-      ready: item.ready || 0,
-    });
+    out.push(
+      Resource.create({
+        resource: item.resource,
+        connectionDetails: item.connectionDetails || {},
+        ready: item.ready || 0,
+      })
+    );
   }
 
   return [out, true];

@@ -461,6 +461,7 @@ describe('requireSchema', () => {
     expect(result.requirements).toBeDefined();
     expect(result.requirements?.schemas).toBeDefined();
     expect(result.requirements?.schemas?.['xr-schema']).toEqual({
+      $type: 'apiextensions.fn.proto.v1.SchemaSelector',
       apiVersion: 'example.org/v1',
       kind: 'MyResource',
     });
@@ -490,6 +491,7 @@ describe('requireSchema', () => {
 
     expect(result.requirements?.resources?.['existing-resource']).toBeDefined();
     expect(result.requirements?.schemas?.['composite-schema']).toEqual({
+      $type: 'apiextensions.fn.proto.v1.SchemaSelector',
       apiVersion: 'database.example.org/v1',
       kind: 'Database',
     });
@@ -537,6 +539,7 @@ describe('requireSchema', () => {
     const result = requireSchema(rsp, 'my-schema', 'new.example.org/v2', 'NewKind');
 
     expect(result.requirements?.schemas?.['my-schema']).toEqual({
+      $type: 'apiextensions.fn.proto.v1.SchemaSelector',
       apiVersion: 'new.example.org/v2',
       kind: 'NewKind',
     });

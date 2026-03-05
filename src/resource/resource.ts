@@ -230,16 +230,19 @@ export function fromModel<T extends Record<string, unknown>>(
  *
  * This function performs a deep merge of the source object into the target Resource,
  * allowing you to update specific fields while preserving others. The source can be
- * a plain JavaScript object, a protobuf Struct (Record<string, unknown>), or a
- * Resource object.
+ * a plain JavaScript object or a protobuf Resource object.
  *
- * The merge semantics match the Python SDK's behavior (similar to a dictionary's
- * update method): fields that don't exist will be added, and fields that exist will
- * be overwritten. By default, arrays are replaced rather than concatenated to match
- * Python SDK behavior.
+ * The merge semantics match the Python SDK's behavior: fields that don't exist will
+ * be added, and fields that exist will be overwritten. By default, arrays are replaced
+ * rather than concatenated to match Python SDK behavior.
+ *
+ * When the source is a protobuf Resource (detected via the `$type` property), only its
+ * `resource` field is merged. When the source is a plain object with a top-level
+ * `resource` property, that property is treated as the payload. If the plain object
+ * also has a top-level `metadata` field, both are merged into the resource data.
  *
  * @param r - The Resource to update
- * @param source - The source data to merge (plain object, Struct, or Resource)
+ * @param source - The source data to merge (plain object or protobuf Resource)
  * @param options - Optional merge configuration (default: { mergeArrays: false })
  *
  * @example
@@ -288,14 +291,13 @@ export function update(
   // Default to Python SDK behavior: replace arrays rather than concatenating
   const mergeArrays = options?.mergeArrays ?? false;
 
-  // Detect genuine protobuf `Resource` instances by checking for protobuf-specific fields
-  // (the generated Resource interface includes `connectionDetails` and `ready`).
+  // Detect genuine protobuf `Resource` instances by checking for the $type property
+  // that is automatically added by protoc-gen-ts_proto when outputTypeRegistry=true
   const isProtoResource =
     typeof source === 'object' &&
     source !== null &&
-    'resource' in source &&
-    typeof (source as { resource?: unknown }).resource === 'object' &&
-    ('connectionDetails' in source || 'ready' in source);
+    '$type' in source &&
+    (source as { $type?: string }).$type === 'apiextensions.fn.proto.v1.Resource';
 
   let sourceData: Record<string, unknown>;
 

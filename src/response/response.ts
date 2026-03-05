@@ -14,6 +14,13 @@ import {
   Ready,
   ResourceSelector,
 } from '../proto/run_function.js';
+import {
+  State,
+  ResponseMeta,
+  Result,
+  Requirements,
+  SchemaSelector,
+} from '../proto/run_function.js';
 import { Duration } from '../proto/google/protobuf/duration.js';
 import { merge } from 'ts-deepmerge';
 
@@ -21,7 +28,7 @@ import { merge } from 'ts-deepmerge';
  * Default time-to-live for function responses (60 seconds).
  * Crossplane will call the function again when the TTL expires.
  */
-const DEFAULT_TTL: Duration = { seconds: 60, nanos: 0 };
+const DEFAULT_TTL = Duration.create({ seconds: 60, nanos: 0 });
 
 export { DEFAULT_TTL };
 
@@ -58,7 +65,7 @@ export function to(req: RunFunctionRequest, ttl?: Duration): RunFunctionResponse
 
   // If desired is not set, initialize it
   if (!desired) {
-    desired = { composite: undefined, resources: {} };
+    desired = State.create({ composite: undefined, resources: {} });
   }
 
   // If composite is explicitly null, initialize it as an empty resource
@@ -66,14 +73,14 @@ export function to(req: RunFunctionRequest, ttl?: Duration): RunFunctionResponse
     desired.composite = Resource.fromJSON({});
   }
 
-  return {
+  return RunFunctionResponse.create({
     conditions: [],
     context: req.context,
     desired: desired,
-    meta: { tag: req.meta?.tag || '', ttl: ttl || DEFAULT_TTL },
+    meta: ResponseMeta.create({ tag: req.meta?.tag || '', ttl: ttl || DEFAULT_TTL }),
     requirements: undefined,
     results: [],
-  };
+  });
 }
 
 type NamedResource = {
@@ -131,10 +138,12 @@ export function updateDesiredComposedResources(
  */
 export function fatal(rsp: RunFunctionResponse, message: string): RunFunctionResponse {
   if (rsp && rsp.results) {
-    rsp.results.push({
-      severity: Severity.SEVERITY_FATAL,
-      message: message,
-    });
+    rsp.results.push(
+      Result.create({
+        severity: Severity.SEVERITY_FATAL,
+        message: message,
+      })
+    );
   }
   return rsp;
 }
@@ -156,10 +165,12 @@ export function fatal(rsp: RunFunctionResponse, message: string): RunFunctionRes
  */
 export function normal(rsp: RunFunctionResponse, message: string) {
   if (rsp && rsp.results) {
-    rsp.results.push({
-      severity: Severity.SEVERITY_NORMAL,
-      message: message,
-    });
+    rsp.results.push(
+      Result.create({
+        severity: Severity.SEVERITY_NORMAL,
+        message: message,
+      })
+    );
   }
 }
 
@@ -182,10 +193,12 @@ export function normal(rsp: RunFunctionResponse, message: string) {
  */
 export function warning(rsp: RunFunctionResponse, message: string) {
   if (rsp && rsp.results) {
-    rsp.results.push({
-      severity: Severity.SEVERITY_WARNING,
-      message: message,
-    });
+    rsp.results.push(
+      Result.create({
+        severity: Severity.SEVERITY_WARNING,
+        message: message,
+      })
+    );
   }
 }
 
@@ -218,7 +231,7 @@ export function setDesiredComposedResources(
 ): RunFunctionResponse {
   // Ensure desired state exists
   if (!rsp.desired) {
-    rsp.desired = { composite: undefined, resources: {} };
+    rsp.desired = State.create({ composite: undefined, resources: {} });
   }
 
   // Merge the new resources with existing ones
@@ -268,7 +281,7 @@ export function setDesiredResources(
 ): RunFunctionResponse {
   // Ensure desired state exists
   if (!rsp.desired) {
-    rsp.desired = { composite: undefined, resources: {} };
+    rsp.desired = State.create({ composite: undefined, resources: {} });
   }
 
   // Convert each resource to Resource format
@@ -342,7 +355,7 @@ export function setDesiredCompositeStatus({
 }): RunFunctionResponse {
   // Ensure desired state exists
   if (!rsp.desired) {
-    rsp.desired = { composite: undefined, resources: {} };
+    rsp.desired = State.create({ composite: undefined, resources: {} });
   }
 
   // Ensure composite exists
@@ -423,7 +436,7 @@ export function setDesiredCompositeResource(
   ready?: Ready
 ): RunFunctionResponse {
   if (!rsp.desired) {
-    rsp.desired = { composite: undefined, resources: {} };
+    rsp.desired = State.create({ composite: undefined, resources: {} });
   }
 
   // Create a new resource with the specified ready status using fromPartial
@@ -502,19 +515,19 @@ export function requireSchema(
   kind: string
 ): RunFunctionResponse {
   if (!rsp.requirements) {
-    rsp.requirements = {
+    rsp.requirements = Requirements.create({
       extraResources: {},
       resources: {},
       schemas: {},
-    };
+    });
   }
   if (!rsp.requirements.schemas) {
     rsp.requirements.schemas = {};
   }
-  rsp.requirements.schemas[name] = {
+  rsp.requirements.schemas[name] = SchemaSelector.create({
     apiVersion,
     kind,
-  };
+  });
   return rsp;
 }
 
@@ -570,11 +583,11 @@ export function requireResource(
   selector: ResourceSelector
 ): RunFunctionResponse {
   if (!rsp.requirements) {
-    rsp.requirements = {
+    rsp.requirements = Requirements.create({
       extraResources: {},
       resources: {},
       schemas: {},
-    };
+    });
   }
   if (!rsp.requirements.resources) {
     rsp.requirements.resources = {};
