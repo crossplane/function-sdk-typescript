@@ -20,6 +20,7 @@ import {
 } from "@grpc/grpc-js";
 import { Duration } from "./google/protobuf/duration.js";
 import { Struct } from "./google/protobuf/struct.js";
+import { messageTypeRegistry } from "./typeRegistry.js";
 
 export const protobufPackage = "apiextensions.fn.proto.v1";
 
@@ -309,6 +310,7 @@ export function statusToJSON(object: Status): string {
 
 /** A RunFunctionRequest requests that the function be run. */
 export interface RunFunctionRequest {
+  $type: "apiextensions.fn.proto.v1.RunFunctionRequest";
   /** Metadata pertaining to this request. */
   meta:
     | RequestMeta
@@ -392,48 +394,57 @@ export interface RunFunctionRequest {
 }
 
 export interface RunFunctionRequest_ExtraResourcesEntry {
+  $type: "apiextensions.fn.proto.v1.RunFunctionRequest.ExtraResourcesEntry";
   key: string;
   value: Resources | undefined;
 }
 
 export interface RunFunctionRequest_CredentialsEntry {
+  $type: "apiextensions.fn.proto.v1.RunFunctionRequest.CredentialsEntry";
   key: string;
   value: Credentials | undefined;
 }
 
 export interface RunFunctionRequest_RequiredResourcesEntry {
+  $type: "apiextensions.fn.proto.v1.RunFunctionRequest.RequiredResourcesEntry";
   key: string;
   value: Resources | undefined;
 }
 
 export interface RunFunctionRequest_RequiredSchemasEntry {
+  $type: "apiextensions.fn.proto.v1.RunFunctionRequest.RequiredSchemasEntry";
   key: string;
   value: Schema | undefined;
 }
 
 /** Credentials that a function may use to communicate with an external system. */
 export interface Credentials {
+  $type: "apiextensions.fn.proto.v1.Credentials";
   /** Credential data loaded by Crossplane, for example from a Secret. */
   credentialData?: CredentialData | undefined;
 }
 
 /** CredentialData loaded by Crossplane, for example from a Secret. */
 export interface CredentialData {
+  $type: "apiextensions.fn.proto.v1.CredentialData";
   data: { [key: string]: Buffer };
 }
 
 export interface CredentialData_DataEntry {
+  $type: "apiextensions.fn.proto.v1.CredentialData.DataEntry";
   key: string;
   value: Buffer;
 }
 
 /** Resources represents the state of several Crossplane resources. */
 export interface Resources {
+  $type: "apiextensions.fn.proto.v1.Resources";
   items: Resource[];
 }
 
 /** A RunFunctionResponse contains the result of a function run. */
 export interface RunFunctionResponse {
+  $type: "apiextensions.fn.proto.v1.RunFunctionResponse";
   /** Metadata pertaining to this response. */
   meta:
     | ResponseMeta
@@ -484,6 +495,7 @@ export interface RunFunctionResponse {
 
 /** RequestMeta contains metadata pertaining to a RunFunctionRequest. */
 export interface RequestMeta {
+  $type: "apiextensions.fn.proto.v1.RequestMeta";
   /**
    * An opaque string identifying a request. Requests with identical tags will
    * be otherwise identical.
@@ -499,6 +511,7 @@ export interface RequestMeta {
 
 /** Requirements that must be satisfied for a function to run successfully. */
 export interface Requirements {
+  $type: "apiextensions.fn.proto.v1.Requirements";
   /**
    * Resources that this function requires. The map key uniquely identifies the
    * group of resources.
@@ -521,22 +534,26 @@ export interface Requirements {
 }
 
 export interface Requirements_ExtraResourcesEntry {
+  $type: "apiextensions.fn.proto.v1.Requirements.ExtraResourcesEntry";
   key: string;
   value: ResourceSelector | undefined;
 }
 
 export interface Requirements_ResourcesEntry {
+  $type: "apiextensions.fn.proto.v1.Requirements.ResourcesEntry";
   key: string;
   value: ResourceSelector | undefined;
 }
 
 export interface Requirements_SchemasEntry {
+  $type: "apiextensions.fn.proto.v1.Requirements.SchemasEntry";
   key: string;
   value: SchemaSelector | undefined;
 }
 
 /** SchemaSelector identifies a resource kind whose OpenAPI schema is requested. */
 export interface SchemaSelector {
+  $type: "apiextensions.fn.proto.v1.SchemaSelector";
   /** API version of the resource kind, e.g. "example.org/v1". */
   apiVersion: string;
   /** Kind of resource, e.g. "MyResource". */
@@ -545,6 +562,7 @@ export interface SchemaSelector {
 
 /** Schema represents the OpenAPI schema for a resource kind. */
 export interface Schema {
+  $type: "apiextensions.fn.proto.v1.Schema";
   /**
    * The OpenAPI v3 schema of the resource kind as unstructured JSON.
    * For CRDs this is the spec.versions[].schema.openAPIV3Schema field.
@@ -555,6 +573,7 @@ export interface Schema {
 
 /** ResourceSelector selects a group of resources, either by name or by label. */
 export interface ResourceSelector {
+  $type: "apiextensions.fn.proto.v1.ResourceSelector";
   /** API version of resources to select. */
   apiVersion: string;
   /** Kind of resources to select. */
@@ -577,16 +596,19 @@ export interface ResourceSelector {
 
 /** MatchLabels defines a set of labels to match resources against. */
 export interface MatchLabels {
+  $type: "apiextensions.fn.proto.v1.MatchLabels";
   labels: { [key: string]: string };
 }
 
 export interface MatchLabels_LabelsEntry {
+  $type: "apiextensions.fn.proto.v1.MatchLabels.LabelsEntry";
   key: string;
   value: string;
 }
 
 /** ResponseMeta contains metadata pertaining to a RunFunctionResponse. */
 export interface ResponseMeta {
+  $type: "apiextensions.fn.proto.v1.ResponseMeta";
   /**
    * An opaque string identifying the content of the request. Must match the
    * meta.tag of the corresponding RunFunctionRequest.
@@ -602,6 +624,7 @@ export interface ResponseMeta {
 
 /** State of the XR (XR) and any resources. */
 export interface State {
+  $type: "apiextensions.fn.proto.v1.State";
   /** The state of the XR (XR). */
   composite:
     | Resource
@@ -615,12 +638,14 @@ export interface State {
 }
 
 export interface State_ResourcesEntry {
+  $type: "apiextensions.fn.proto.v1.State.ResourcesEntry";
   key: string;
   value: Resource | undefined;
 }
 
 /** A Resource represents the state of a Kubernetes resource. */
 export interface Resource {
+  $type: "apiextensions.fn.proto.v1.Resource";
   /**
    * The JSON representation of the resource.
    *
@@ -677,12 +702,14 @@ export interface Resource {
 }
 
 export interface Resource_ConnectionDetailsEntry {
+  $type: "apiextensions.fn.proto.v1.Resource.ConnectionDetailsEntry";
   key: string;
   value: Buffer;
 }
 
 /** A Result of running a function. */
 export interface Result {
+  $type: "apiextensions.fn.proto.v1.Result";
   /** Severity of this result. */
   severity: Severity;
   /** Human-readable details about the result. */
@@ -705,6 +732,7 @@ export interface Result {
  * https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties.
  */
 export interface Condition {
+  $type: "apiextensions.fn.proto.v1.Condition";
   /** Type of condition in PascalCase. */
   type: string;
   /** Status of the condition. */
@@ -730,6 +758,7 @@ export interface Condition {
 
 function createBaseRunFunctionRequest(): RunFunctionRequest {
   return {
+    $type: "apiextensions.fn.proto.v1.RunFunctionRequest",
     meta: undefined,
     observed: undefined,
     desired: undefined,
@@ -742,7 +771,9 @@ function createBaseRunFunctionRequest(): RunFunctionRequest {
   };
 }
 
-export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
+export const RunFunctionRequest: MessageFns<RunFunctionRequest, "apiextensions.fn.proto.v1.RunFunctionRequest"> = {
+  $type: "apiextensions.fn.proto.v1.RunFunctionRequest" as const,
+
   encode(message: RunFunctionRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.meta !== undefined) {
       RequestMeta.encode(message.meta, writer.uint32(10).fork()).join();
@@ -760,16 +791,32 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
       Struct.encode(Struct.wrap(message.context), writer.uint32(42).fork()).join();
     }
     globalThis.Object.entries(message.extraResources).forEach(([key, value]: [string, Resources]) => {
-      RunFunctionRequest_ExtraResourcesEntry.encode({ key: key as any, value }, writer.uint32(50).fork()).join();
+      RunFunctionRequest_ExtraResourcesEntry.encode({
+        $type: "apiextensions.fn.proto.v1.RunFunctionRequest.ExtraResourcesEntry",
+        key: key as any,
+        value,
+      }, writer.uint32(50).fork()).join();
     });
     globalThis.Object.entries(message.credentials).forEach(([key, value]: [string, Credentials]) => {
-      RunFunctionRequest_CredentialsEntry.encode({ key: key as any, value }, writer.uint32(58).fork()).join();
+      RunFunctionRequest_CredentialsEntry.encode({
+        $type: "apiextensions.fn.proto.v1.RunFunctionRequest.CredentialsEntry",
+        key: key as any,
+        value,
+      }, writer.uint32(58).fork()).join();
     });
     globalThis.Object.entries(message.requiredResources).forEach(([key, value]: [string, Resources]) => {
-      RunFunctionRequest_RequiredResourcesEntry.encode({ key: key as any, value }, writer.uint32(66).fork()).join();
+      RunFunctionRequest_RequiredResourcesEntry.encode({
+        $type: "apiextensions.fn.proto.v1.RunFunctionRequest.RequiredResourcesEntry",
+        key: key as any,
+        value,
+      }, writer.uint32(66).fork()).join();
     });
     globalThis.Object.entries(message.requiredSchemas).forEach(([key, value]: [string, Schema]) => {
-      RunFunctionRequest_RequiredSchemasEntry.encode({ key: key as any, value }, writer.uint32(74).fork()).join();
+      RunFunctionRequest_RequiredSchemasEntry.encode({
+        $type: "apiextensions.fn.proto.v1.RunFunctionRequest.RequiredSchemasEntry",
+        key: key as any,
+        value,
+      }, writer.uint32(74).fork()).join();
     });
     return writer;
   },
@@ -876,13 +923,14 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
 
   fromJSON(object: any): RunFunctionRequest {
     return {
+      $type: RunFunctionRequest.$type,
       meta: isSet(object.meta) ? RequestMeta.fromJSON(object.meta) : undefined,
       observed: isSet(object.observed) ? State.fromJSON(object.observed) : undefined,
       desired: isSet(object.desired) ? State.fromJSON(object.desired) : undefined,
       input: isObject(object.input) ? object.input : undefined,
       context: isObject(object.context) ? object.context : undefined,
       extraResources: isObject(object.extraResources)
-        ? (globalThis.Object.entries(object.extraResources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.extraResources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Resources }, [key, value]: [string, any]) => {
             acc[key] = Resources.fromJSON(value);
             return acc;
@@ -890,7 +938,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
           {},
         )
         : isObject(object.extra_resources)
-        ? (globalThis.Object.entries(object.extra_resources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.extra_resources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Resources }, [key, value]: [string, any]) => {
             acc[key] = Resources.fromJSON(value);
             return acc;
@@ -899,7 +947,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
         )
         : {},
       credentials: isObject(object.credentials)
-        ? (globalThis.Object.entries(object.credentials) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.credentials) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Credentials }, [key, value]: [string, any]) => {
             acc[key] = Credentials.fromJSON(value);
             return acc;
@@ -908,7 +956,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
         )
         : {},
       requiredResources: isObject(object.requiredResources)
-        ? (globalThis.Object.entries(object.requiredResources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.requiredResources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Resources }, [key, value]: [string, any]) => {
             acc[key] = Resources.fromJSON(value);
             return acc;
@@ -916,7 +964,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
           {},
         )
         : isObject(object.required_resources)
-        ? (globalThis.Object.entries(object.required_resources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.required_resources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Resources }, [key, value]: [string, any]) => {
             acc[key] = Resources.fromJSON(value);
             return acc;
@@ -925,7 +973,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
         )
         : {},
       requiredSchemas: isObject(object.requiredSchemas)
-        ? (globalThis.Object.entries(object.requiredSchemas) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.requiredSchemas) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Schema }, [key, value]: [string, any]) => {
             acc[key] = Schema.fromJSON(value);
             return acc;
@@ -933,7 +981,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
           {},
         )
         : isObject(object.required_schemas)
-        ? (globalThis.Object.entries(object.required_schemas) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.required_schemas) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Schema }, [key, value]: [string, any]) => {
             acc[key] = Schema.fromJSON(value);
             return acc;
@@ -962,7 +1010,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
       obj.context = message.context;
     }
     if (message.extraResources) {
-      const entries = globalThis.Object.entries(message.extraResources) as [string, Resources][];
+      const entries = globalThis.Object.entries(message.extraResources) as unknown as [string, Resources][];
       if (entries.length > 0) {
         obj.extraResources = {};
         entries.forEach(([k, v]) => {
@@ -971,7 +1019,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
       }
     }
     if (message.credentials) {
-      const entries = globalThis.Object.entries(message.credentials) as [string, Credentials][];
+      const entries = globalThis.Object.entries(message.credentials) as unknown as [string, Credentials][];
       if (entries.length > 0) {
         obj.credentials = {};
         entries.forEach(([k, v]) => {
@@ -980,7 +1028,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
       }
     }
     if (message.requiredResources) {
-      const entries = globalThis.Object.entries(message.requiredResources) as [string, Resources][];
+      const entries = globalThis.Object.entries(message.requiredResources) as unknown as [string, Resources][];
       if (entries.length > 0) {
         obj.requiredResources = {};
         entries.forEach(([k, v]) => {
@@ -989,7 +1037,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
       }
     }
     if (message.requiredSchemas) {
-      const entries = globalThis.Object.entries(message.requiredSchemas) as [string, Schema][];
+      const entries = globalThis.Object.entries(message.requiredSchemas) as unknown as [string, Schema][];
       if (entries.length > 0) {
         obj.requiredSchemas = {};
         entries.forEach(([k, v]) => {
@@ -1016,49 +1064,56 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
       : undefined;
     message.input = object.input ?? undefined;
     message.context = object.context ?? undefined;
-    message.extraResources = (globalThis.Object.entries(object.extraResources ?? {}) as [string, Resources][]).reduce(
-      (acc: { [key: string]: Resources }, [key, value]: [string, Resources]) => {
-        if (value !== undefined) {
-          acc[key] = Resources.fromPartial(value);
-        }
-        return acc;
-      },
-      {},
-    );
-    message.credentials = (globalThis.Object.entries(object.credentials ?? {}) as [string, Credentials][]).reduce(
-      (acc: { [key: string]: Credentials }, [key, value]: [string, Credentials]) => {
+    message.extraResources =
+      (globalThis.Object.entries(object.extraResources ?? {}) as unknown as [string, Resources][]).reduce(
+        (acc: { [key: string]: Resources }, [key, value]: [string, Resources]) => {
+          if (value !== undefined) {
+            acc[key] = Resources.fromPartial(value);
+          }
+          return acc;
+        },
+        {},
+      );
+    message.credentials = (globalThis.Object.entries(object.credentials ?? {}) as unknown as [string, Credentials][])
+      .reduce((acc: { [key: string]: Credentials }, [key, value]: [string, Credentials]) => {
         if (value !== undefined) {
           acc[key] = Credentials.fromPartial(value);
         }
         return acc;
-      },
-      {},
-    );
-    message.requiredResources = (globalThis.Object.entries(object.requiredResources ?? {}) as [string, Resources][])
-      .reduce((acc: { [key: string]: Resources }, [key, value]: [string, Resources]) => {
-        if (value !== undefined) {
-          acc[key] = Resources.fromPartial(value);
-        }
-        return acc;
       }, {});
-    message.requiredSchemas = (globalThis.Object.entries(object.requiredSchemas ?? {}) as [string, Schema][]).reduce(
-      (acc: { [key: string]: Schema }, [key, value]: [string, Schema]) => {
+    message.requiredResources =
+      (globalThis.Object.entries(object.requiredResources ?? {}) as unknown as [string, Resources][]).reduce(
+        (acc: { [key: string]: Resources }, [key, value]: [string, Resources]) => {
+          if (value !== undefined) {
+            acc[key] = Resources.fromPartial(value);
+          }
+          return acc;
+        },
+        {},
+      );
+    message.requiredSchemas = (globalThis.Object.entries(object.requiredSchemas ?? {}) as unknown as [string, Schema][])
+      .reduce((acc: { [key: string]: Schema }, [key, value]: [string, Schema]) => {
         if (value !== undefined) {
           acc[key] = Schema.fromPartial(value);
         }
         return acc;
-      },
-      {},
-    );
+      }, {});
     return message;
   },
 };
 
+messageTypeRegistry.set(RunFunctionRequest.$type, RunFunctionRequest);
+
 function createBaseRunFunctionRequest_ExtraResourcesEntry(): RunFunctionRequest_ExtraResourcesEntry {
-  return { key: "", value: undefined };
+  return { $type: "apiextensions.fn.proto.v1.RunFunctionRequest.ExtraResourcesEntry", key: "", value: undefined };
 }
 
-export const RunFunctionRequest_ExtraResourcesEntry: MessageFns<RunFunctionRequest_ExtraResourcesEntry> = {
+export const RunFunctionRequest_ExtraResourcesEntry: MessageFns<
+  RunFunctionRequest_ExtraResourcesEntry,
+  "apiextensions.fn.proto.v1.RunFunctionRequest.ExtraResourcesEntry"
+> = {
+  $type: "apiextensions.fn.proto.v1.RunFunctionRequest.ExtraResourcesEntry" as const,
+
   encode(message: RunFunctionRequest_ExtraResourcesEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.key !== "") {
       writer.uint32(10).string(message.key);
@@ -1103,6 +1158,7 @@ export const RunFunctionRequest_ExtraResourcesEntry: MessageFns<RunFunctionReque
 
   fromJSON(object: any): RunFunctionRequest_ExtraResourcesEntry {
     return {
+      $type: RunFunctionRequest_ExtraResourcesEntry.$type,
       key: isSet(object.key) ? globalThis.String(object.key) : "",
       value: isSet(object.value) ? Resources.fromJSON(object.value) : undefined,
     };
@@ -1136,11 +1192,18 @@ export const RunFunctionRequest_ExtraResourcesEntry: MessageFns<RunFunctionReque
   },
 };
 
+messageTypeRegistry.set(RunFunctionRequest_ExtraResourcesEntry.$type, RunFunctionRequest_ExtraResourcesEntry);
+
 function createBaseRunFunctionRequest_CredentialsEntry(): RunFunctionRequest_CredentialsEntry {
-  return { key: "", value: undefined };
+  return { $type: "apiextensions.fn.proto.v1.RunFunctionRequest.CredentialsEntry", key: "", value: undefined };
 }
 
-export const RunFunctionRequest_CredentialsEntry: MessageFns<RunFunctionRequest_CredentialsEntry> = {
+export const RunFunctionRequest_CredentialsEntry: MessageFns<
+  RunFunctionRequest_CredentialsEntry,
+  "apiextensions.fn.proto.v1.RunFunctionRequest.CredentialsEntry"
+> = {
+  $type: "apiextensions.fn.proto.v1.RunFunctionRequest.CredentialsEntry" as const,
+
   encode(message: RunFunctionRequest_CredentialsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.key !== "") {
       writer.uint32(10).string(message.key);
@@ -1185,6 +1248,7 @@ export const RunFunctionRequest_CredentialsEntry: MessageFns<RunFunctionRequest_
 
   fromJSON(object: any): RunFunctionRequest_CredentialsEntry {
     return {
+      $type: RunFunctionRequest_CredentialsEntry.$type,
       key: isSet(object.key) ? globalThis.String(object.key) : "",
       value: isSet(object.value) ? Credentials.fromJSON(object.value) : undefined,
     };
@@ -1218,11 +1282,18 @@ export const RunFunctionRequest_CredentialsEntry: MessageFns<RunFunctionRequest_
   },
 };
 
+messageTypeRegistry.set(RunFunctionRequest_CredentialsEntry.$type, RunFunctionRequest_CredentialsEntry);
+
 function createBaseRunFunctionRequest_RequiredResourcesEntry(): RunFunctionRequest_RequiredResourcesEntry {
-  return { key: "", value: undefined };
+  return { $type: "apiextensions.fn.proto.v1.RunFunctionRequest.RequiredResourcesEntry", key: "", value: undefined };
 }
 
-export const RunFunctionRequest_RequiredResourcesEntry: MessageFns<RunFunctionRequest_RequiredResourcesEntry> = {
+export const RunFunctionRequest_RequiredResourcesEntry: MessageFns<
+  RunFunctionRequest_RequiredResourcesEntry,
+  "apiextensions.fn.proto.v1.RunFunctionRequest.RequiredResourcesEntry"
+> = {
+  $type: "apiextensions.fn.proto.v1.RunFunctionRequest.RequiredResourcesEntry" as const,
+
   encode(message: RunFunctionRequest_RequiredResourcesEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.key !== "") {
       writer.uint32(10).string(message.key);
@@ -1267,6 +1338,7 @@ export const RunFunctionRequest_RequiredResourcesEntry: MessageFns<RunFunctionRe
 
   fromJSON(object: any): RunFunctionRequest_RequiredResourcesEntry {
     return {
+      $type: RunFunctionRequest_RequiredResourcesEntry.$type,
       key: isSet(object.key) ? globalThis.String(object.key) : "",
       value: isSet(object.value) ? Resources.fromJSON(object.value) : undefined,
     };
@@ -1300,11 +1372,18 @@ export const RunFunctionRequest_RequiredResourcesEntry: MessageFns<RunFunctionRe
   },
 };
 
+messageTypeRegistry.set(RunFunctionRequest_RequiredResourcesEntry.$type, RunFunctionRequest_RequiredResourcesEntry);
+
 function createBaseRunFunctionRequest_RequiredSchemasEntry(): RunFunctionRequest_RequiredSchemasEntry {
-  return { key: "", value: undefined };
+  return { $type: "apiextensions.fn.proto.v1.RunFunctionRequest.RequiredSchemasEntry", key: "", value: undefined };
 }
 
-export const RunFunctionRequest_RequiredSchemasEntry: MessageFns<RunFunctionRequest_RequiredSchemasEntry> = {
+export const RunFunctionRequest_RequiredSchemasEntry: MessageFns<
+  RunFunctionRequest_RequiredSchemasEntry,
+  "apiextensions.fn.proto.v1.RunFunctionRequest.RequiredSchemasEntry"
+> = {
+  $type: "apiextensions.fn.proto.v1.RunFunctionRequest.RequiredSchemasEntry" as const,
+
   encode(message: RunFunctionRequest_RequiredSchemasEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.key !== "") {
       writer.uint32(10).string(message.key);
@@ -1349,6 +1428,7 @@ export const RunFunctionRequest_RequiredSchemasEntry: MessageFns<RunFunctionRequ
 
   fromJSON(object: any): RunFunctionRequest_RequiredSchemasEntry {
     return {
+      $type: RunFunctionRequest_RequiredSchemasEntry.$type,
       key: isSet(object.key) ? globalThis.String(object.key) : "",
       value: isSet(object.value) ? Schema.fromJSON(object.value) : undefined,
     };
@@ -1382,11 +1462,15 @@ export const RunFunctionRequest_RequiredSchemasEntry: MessageFns<RunFunctionRequ
   },
 };
 
+messageTypeRegistry.set(RunFunctionRequest_RequiredSchemasEntry.$type, RunFunctionRequest_RequiredSchemasEntry);
+
 function createBaseCredentials(): Credentials {
-  return { credentialData: undefined };
+  return { $type: "apiextensions.fn.proto.v1.Credentials", credentialData: undefined };
 }
 
-export const Credentials: MessageFns<Credentials> = {
+export const Credentials: MessageFns<Credentials, "apiextensions.fn.proto.v1.Credentials"> = {
+  $type: "apiextensions.fn.proto.v1.Credentials" as const,
+
   encode(message: Credentials, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.credentialData !== undefined) {
       CredentialData.encode(message.credentialData, writer.uint32(10).fork()).join();
@@ -1420,6 +1504,7 @@ export const Credentials: MessageFns<Credentials> = {
 
   fromJSON(object: any): Credentials {
     return {
+      $type: Credentials.$type,
       credentialData: isSet(object.credentialData)
         ? CredentialData.fromJSON(object.credentialData)
         : isSet(object.credential_data)
@@ -1448,14 +1533,22 @@ export const Credentials: MessageFns<Credentials> = {
   },
 };
 
+messageTypeRegistry.set(Credentials.$type, Credentials);
+
 function createBaseCredentialData(): CredentialData {
-  return { data: {} };
+  return { $type: "apiextensions.fn.proto.v1.CredentialData", data: {} };
 }
 
-export const CredentialData: MessageFns<CredentialData> = {
+export const CredentialData: MessageFns<CredentialData, "apiextensions.fn.proto.v1.CredentialData"> = {
+  $type: "apiextensions.fn.proto.v1.CredentialData" as const,
+
   encode(message: CredentialData, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     globalThis.Object.entries(message.data).forEach(([key, value]: [string, Buffer]) => {
-      CredentialData_DataEntry.encode({ key: key as any, value }, writer.uint32(10).fork()).join();
+      CredentialData_DataEntry.encode({
+        $type: "apiextensions.fn.proto.v1.CredentialData.DataEntry",
+        key: key as any,
+        value,
+      }, writer.uint32(10).fork()).join();
     });
     return writer;
   },
@@ -1489,8 +1582,9 @@ export const CredentialData: MessageFns<CredentialData> = {
 
   fromJSON(object: any): CredentialData {
     return {
+      $type: CredentialData.$type,
       data: isObject(object.data)
-        ? (globalThis.Object.entries(object.data) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.data) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Buffer }, [key, value]: [string, any]) => {
             acc[key] = Buffer.from(bytesFromBase64(value as string));
             return acc;
@@ -1504,7 +1598,7 @@ export const CredentialData: MessageFns<CredentialData> = {
   toJSON(message: CredentialData): unknown {
     const obj: any = {};
     if (message.data) {
-      const entries = globalThis.Object.entries(message.data) as [string, Buffer][];
+      const entries = globalThis.Object.entries(message.data) as unknown as [string, Buffer][];
       if (entries.length > 0) {
         obj.data = {};
         entries.forEach(([k, v]) => {
@@ -1520,7 +1614,7 @@ export const CredentialData: MessageFns<CredentialData> = {
   },
   fromPartial<I extends Exact<DeepPartial<CredentialData>, I>>(object: I): CredentialData {
     const message = createBaseCredentialData();
-    message.data = (globalThis.Object.entries(object.data ?? {}) as [string, Buffer][]).reduce(
+    message.data = (globalThis.Object.entries(object.data ?? {}) as unknown as [string, Buffer][]).reduce(
       (acc: { [key: string]: Buffer }, [key, value]: [string, Buffer]) => {
         if (value !== undefined) {
           acc[key] = value;
@@ -1533,11 +1627,18 @@ export const CredentialData: MessageFns<CredentialData> = {
   },
 };
 
+messageTypeRegistry.set(CredentialData.$type, CredentialData);
+
 function createBaseCredentialData_DataEntry(): CredentialData_DataEntry {
-  return { key: "", value: Buffer.alloc(0) };
+  return { $type: "apiextensions.fn.proto.v1.CredentialData.DataEntry", key: "", value: Buffer.alloc(0) };
 }
 
-export const CredentialData_DataEntry: MessageFns<CredentialData_DataEntry> = {
+export const CredentialData_DataEntry: MessageFns<
+  CredentialData_DataEntry,
+  "apiextensions.fn.proto.v1.CredentialData.DataEntry"
+> = {
+  $type: "apiextensions.fn.proto.v1.CredentialData.DataEntry" as const,
+
   encode(message: CredentialData_DataEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.key !== "") {
       writer.uint32(10).string(message.key);
@@ -1582,6 +1683,7 @@ export const CredentialData_DataEntry: MessageFns<CredentialData_DataEntry> = {
 
   fromJSON(object: any): CredentialData_DataEntry {
     return {
+      $type: CredentialData_DataEntry.$type,
       key: isSet(object.key) ? globalThis.String(object.key) : "",
       value: isSet(object.value) ? Buffer.from(bytesFromBase64(object.value)) : Buffer.alloc(0),
     };
@@ -1609,11 +1711,15 @@ export const CredentialData_DataEntry: MessageFns<CredentialData_DataEntry> = {
   },
 };
 
+messageTypeRegistry.set(CredentialData_DataEntry.$type, CredentialData_DataEntry);
+
 function createBaseResources(): Resources {
-  return { items: [] };
+  return { $type: "apiextensions.fn.proto.v1.Resources", items: [] };
 }
 
-export const Resources: MessageFns<Resources> = {
+export const Resources: MessageFns<Resources, "apiextensions.fn.proto.v1.Resources"> = {
+  $type: "apiextensions.fn.proto.v1.Resources" as const,
+
   encode(message: Resources, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     for (const v of message.items) {
       Resource.encode(v!, writer.uint32(10).fork()).join();
@@ -1646,7 +1752,10 @@ export const Resources: MessageFns<Resources> = {
   },
 
   fromJSON(object: any): Resources {
-    return { items: globalThis.Array.isArray(object?.items) ? object.items.map((e: any) => Resource.fromJSON(e)) : [] };
+    return {
+      $type: Resources.$type,
+      items: globalThis.Array.isArray(object?.items) ? object.items.map((e: any) => Resource.fromJSON(e)) : [],
+    };
   },
 
   toJSON(message: Resources): unknown {
@@ -1667,8 +1776,11 @@ export const Resources: MessageFns<Resources> = {
   },
 };
 
+messageTypeRegistry.set(Resources.$type, Resources);
+
 function createBaseRunFunctionResponse(): RunFunctionResponse {
   return {
+    $type: "apiextensions.fn.proto.v1.RunFunctionResponse",
     meta: undefined,
     desired: undefined,
     results: [],
@@ -1679,7 +1791,9 @@ function createBaseRunFunctionResponse(): RunFunctionResponse {
   };
 }
 
-export const RunFunctionResponse: MessageFns<RunFunctionResponse> = {
+export const RunFunctionResponse: MessageFns<RunFunctionResponse, "apiextensions.fn.proto.v1.RunFunctionResponse"> = {
+  $type: "apiextensions.fn.proto.v1.RunFunctionResponse" as const,
+
   encode(message: RunFunctionResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.meta !== undefined) {
       ResponseMeta.encode(message.meta, writer.uint32(10).fork()).join();
@@ -1779,6 +1893,7 @@ export const RunFunctionResponse: MessageFns<RunFunctionResponse> = {
 
   fromJSON(object: any): RunFunctionResponse {
     return {
+      $type: RunFunctionResponse.$type,
       meta: isSet(object.meta) ? ResponseMeta.fromJSON(object.meta) : undefined,
       desired: isSet(object.desired) ? State.fromJSON(object.desired) : undefined,
       results: globalThis.Array.isArray(object?.results) ? object.results.map((e: any) => Result.fromJSON(e)) : [],
@@ -1839,11 +1954,15 @@ export const RunFunctionResponse: MessageFns<RunFunctionResponse> = {
   },
 };
 
+messageTypeRegistry.set(RunFunctionResponse.$type, RunFunctionResponse);
+
 function createBaseRequestMeta(): RequestMeta {
-  return { tag: "", capabilities: [] };
+  return { $type: "apiextensions.fn.proto.v1.RequestMeta", tag: "", capabilities: [] };
 }
 
-export const RequestMeta: MessageFns<RequestMeta> = {
+export const RequestMeta: MessageFns<RequestMeta, "apiextensions.fn.proto.v1.RequestMeta"> = {
+  $type: "apiextensions.fn.proto.v1.RequestMeta" as const,
+
   encode(message: RequestMeta, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.tag !== "") {
       writer.uint32(10).string(message.tag);
@@ -1900,6 +2019,7 @@ export const RequestMeta: MessageFns<RequestMeta> = {
 
   fromJSON(object: any): RequestMeta {
     return {
+      $type: RequestMeta.$type,
       tag: isSet(object.tag) ? globalThis.String(object.tag) : "",
       capabilities: globalThis.Array.isArray(object?.capabilities)
         ? object.capabilities.map((e: any) => capabilityFromJSON(e))
@@ -1929,20 +2049,36 @@ export const RequestMeta: MessageFns<RequestMeta> = {
   },
 };
 
+messageTypeRegistry.set(RequestMeta.$type, RequestMeta);
+
 function createBaseRequirements(): Requirements {
-  return { extraResources: {}, resources: {}, schemas: {} };
+  return { $type: "apiextensions.fn.proto.v1.Requirements", extraResources: {}, resources: {}, schemas: {} };
 }
 
-export const Requirements: MessageFns<Requirements> = {
+export const Requirements: MessageFns<Requirements, "apiextensions.fn.proto.v1.Requirements"> = {
+  $type: "apiextensions.fn.proto.v1.Requirements" as const,
+
   encode(message: Requirements, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     globalThis.Object.entries(message.extraResources).forEach(([key, value]: [string, ResourceSelector]) => {
-      Requirements_ExtraResourcesEntry.encode({ key: key as any, value }, writer.uint32(10).fork()).join();
+      Requirements_ExtraResourcesEntry.encode({
+        $type: "apiextensions.fn.proto.v1.Requirements.ExtraResourcesEntry",
+        key: key as any,
+        value,
+      }, writer.uint32(10).fork()).join();
     });
     globalThis.Object.entries(message.resources).forEach(([key, value]: [string, ResourceSelector]) => {
-      Requirements_ResourcesEntry.encode({ key: key as any, value }, writer.uint32(18).fork()).join();
+      Requirements_ResourcesEntry.encode({
+        $type: "apiextensions.fn.proto.v1.Requirements.ResourcesEntry",
+        key: key as any,
+        value,
+      }, writer.uint32(18).fork()).join();
     });
     globalThis.Object.entries(message.schemas).forEach(([key, value]: [string, SchemaSelector]) => {
-      Requirements_SchemasEntry.encode({ key: key as any, value }, writer.uint32(26).fork()).join();
+      Requirements_SchemasEntry.encode({
+        $type: "apiextensions.fn.proto.v1.Requirements.SchemasEntry",
+        key: key as any,
+        value,
+      }, writer.uint32(26).fork()).join();
     });
     return writer;
   },
@@ -1998,8 +2134,9 @@ export const Requirements: MessageFns<Requirements> = {
 
   fromJSON(object: any): Requirements {
     return {
+      $type: Requirements.$type,
       extraResources: isObject(object.extraResources)
-        ? (globalThis.Object.entries(object.extraResources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.extraResources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: ResourceSelector }, [key, value]: [string, any]) => {
             acc[key] = ResourceSelector.fromJSON(value);
             return acc;
@@ -2007,7 +2144,7 @@ export const Requirements: MessageFns<Requirements> = {
           {},
         )
         : isObject(object.extra_resources)
-        ? (globalThis.Object.entries(object.extra_resources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.extra_resources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: ResourceSelector }, [key, value]: [string, any]) => {
             acc[key] = ResourceSelector.fromJSON(value);
             return acc;
@@ -2016,7 +2153,7 @@ export const Requirements: MessageFns<Requirements> = {
         )
         : {},
       resources: isObject(object.resources)
-        ? (globalThis.Object.entries(object.resources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.resources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: ResourceSelector }, [key, value]: [string, any]) => {
             acc[key] = ResourceSelector.fromJSON(value);
             return acc;
@@ -2025,7 +2162,7 @@ export const Requirements: MessageFns<Requirements> = {
         )
         : {},
       schemas: isObject(object.schemas)
-        ? (globalThis.Object.entries(object.schemas) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.schemas) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: SchemaSelector }, [key, value]: [string, any]) => {
             acc[key] = SchemaSelector.fromJSON(value);
             return acc;
@@ -2039,7 +2176,7 @@ export const Requirements: MessageFns<Requirements> = {
   toJSON(message: Requirements): unknown {
     const obj: any = {};
     if (message.extraResources) {
-      const entries = globalThis.Object.entries(message.extraResources) as [string, ResourceSelector][];
+      const entries = globalThis.Object.entries(message.extraResources) as unknown as [string, ResourceSelector][];
       if (entries.length > 0) {
         obj.extraResources = {};
         entries.forEach(([k, v]) => {
@@ -2048,7 +2185,7 @@ export const Requirements: MessageFns<Requirements> = {
       }
     }
     if (message.resources) {
-      const entries = globalThis.Object.entries(message.resources) as [string, ResourceSelector][];
+      const entries = globalThis.Object.entries(message.resources) as unknown as [string, ResourceSelector][];
       if (entries.length > 0) {
         obj.resources = {};
         entries.forEach(([k, v]) => {
@@ -2057,7 +2194,7 @@ export const Requirements: MessageFns<Requirements> = {
       }
     }
     if (message.schemas) {
-      const entries = globalThis.Object.entries(message.schemas) as [string, SchemaSelector][];
+      const entries = globalThis.Object.entries(message.schemas) as unknown as [string, SchemaSelector][];
       if (entries.length > 0) {
         obj.schemas = {};
         entries.forEach(([k, v]) => {
@@ -2073,23 +2210,24 @@ export const Requirements: MessageFns<Requirements> = {
   },
   fromPartial<I extends Exact<DeepPartial<Requirements>, I>>(object: I): Requirements {
     const message = createBaseRequirements();
-    message.extraResources = (globalThis.Object.entries(object.extraResources ?? {}) as [string, ResourceSelector][])
+    message.extraResources =
+      (globalThis.Object.entries(object.extraResources ?? {}) as unknown as [string, ResourceSelector][]).reduce(
+        (acc: { [key: string]: ResourceSelector }, [key, value]: [string, ResourceSelector]) => {
+          if (value !== undefined) {
+            acc[key] = ResourceSelector.fromPartial(value);
+          }
+          return acc;
+        },
+        {},
+      );
+    message.resources = (globalThis.Object.entries(object.resources ?? {}) as unknown as [string, ResourceSelector][])
       .reduce((acc: { [key: string]: ResourceSelector }, [key, value]: [string, ResourceSelector]) => {
         if (value !== undefined) {
           acc[key] = ResourceSelector.fromPartial(value);
         }
         return acc;
       }, {});
-    message.resources = (globalThis.Object.entries(object.resources ?? {}) as [string, ResourceSelector][]).reduce(
-      (acc: { [key: string]: ResourceSelector }, [key, value]: [string, ResourceSelector]) => {
-        if (value !== undefined) {
-          acc[key] = ResourceSelector.fromPartial(value);
-        }
-        return acc;
-      },
-      {},
-    );
-    message.schemas = (globalThis.Object.entries(object.schemas ?? {}) as [string, SchemaSelector][]).reduce(
+    message.schemas = (globalThis.Object.entries(object.schemas ?? {}) as unknown as [string, SchemaSelector][]).reduce(
       (acc: { [key: string]: SchemaSelector }, [key, value]: [string, SchemaSelector]) => {
         if (value !== undefined) {
           acc[key] = SchemaSelector.fromPartial(value);
@@ -2102,11 +2240,18 @@ export const Requirements: MessageFns<Requirements> = {
   },
 };
 
+messageTypeRegistry.set(Requirements.$type, Requirements);
+
 function createBaseRequirements_ExtraResourcesEntry(): Requirements_ExtraResourcesEntry {
-  return { key: "", value: undefined };
+  return { $type: "apiextensions.fn.proto.v1.Requirements.ExtraResourcesEntry", key: "", value: undefined };
 }
 
-export const Requirements_ExtraResourcesEntry: MessageFns<Requirements_ExtraResourcesEntry> = {
+export const Requirements_ExtraResourcesEntry: MessageFns<
+  Requirements_ExtraResourcesEntry,
+  "apiextensions.fn.proto.v1.Requirements.ExtraResourcesEntry"
+> = {
+  $type: "apiextensions.fn.proto.v1.Requirements.ExtraResourcesEntry" as const,
+
   encode(message: Requirements_ExtraResourcesEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.key !== "") {
       writer.uint32(10).string(message.key);
@@ -2151,6 +2296,7 @@ export const Requirements_ExtraResourcesEntry: MessageFns<Requirements_ExtraReso
 
   fromJSON(object: any): Requirements_ExtraResourcesEntry {
     return {
+      $type: Requirements_ExtraResourcesEntry.$type,
       key: isSet(object.key) ? globalThis.String(object.key) : "",
       value: isSet(object.value) ? ResourceSelector.fromJSON(object.value) : undefined,
     };
@@ -2184,11 +2330,18 @@ export const Requirements_ExtraResourcesEntry: MessageFns<Requirements_ExtraReso
   },
 };
 
+messageTypeRegistry.set(Requirements_ExtraResourcesEntry.$type, Requirements_ExtraResourcesEntry);
+
 function createBaseRequirements_ResourcesEntry(): Requirements_ResourcesEntry {
-  return { key: "", value: undefined };
+  return { $type: "apiextensions.fn.proto.v1.Requirements.ResourcesEntry", key: "", value: undefined };
 }
 
-export const Requirements_ResourcesEntry: MessageFns<Requirements_ResourcesEntry> = {
+export const Requirements_ResourcesEntry: MessageFns<
+  Requirements_ResourcesEntry,
+  "apiextensions.fn.proto.v1.Requirements.ResourcesEntry"
+> = {
+  $type: "apiextensions.fn.proto.v1.Requirements.ResourcesEntry" as const,
+
   encode(message: Requirements_ResourcesEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.key !== "") {
       writer.uint32(10).string(message.key);
@@ -2233,6 +2386,7 @@ export const Requirements_ResourcesEntry: MessageFns<Requirements_ResourcesEntry
 
   fromJSON(object: any): Requirements_ResourcesEntry {
     return {
+      $type: Requirements_ResourcesEntry.$type,
       key: isSet(object.key) ? globalThis.String(object.key) : "",
       value: isSet(object.value) ? ResourceSelector.fromJSON(object.value) : undefined,
     };
@@ -2262,11 +2416,18 @@ export const Requirements_ResourcesEntry: MessageFns<Requirements_ResourcesEntry
   },
 };
 
+messageTypeRegistry.set(Requirements_ResourcesEntry.$type, Requirements_ResourcesEntry);
+
 function createBaseRequirements_SchemasEntry(): Requirements_SchemasEntry {
-  return { key: "", value: undefined };
+  return { $type: "apiextensions.fn.proto.v1.Requirements.SchemasEntry", key: "", value: undefined };
 }
 
-export const Requirements_SchemasEntry: MessageFns<Requirements_SchemasEntry> = {
+export const Requirements_SchemasEntry: MessageFns<
+  Requirements_SchemasEntry,
+  "apiextensions.fn.proto.v1.Requirements.SchemasEntry"
+> = {
+  $type: "apiextensions.fn.proto.v1.Requirements.SchemasEntry" as const,
+
   encode(message: Requirements_SchemasEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.key !== "") {
       writer.uint32(10).string(message.key);
@@ -2311,6 +2472,7 @@ export const Requirements_SchemasEntry: MessageFns<Requirements_SchemasEntry> = 
 
   fromJSON(object: any): Requirements_SchemasEntry {
     return {
+      $type: Requirements_SchemasEntry.$type,
       key: isSet(object.key) ? globalThis.String(object.key) : "",
       value: isSet(object.value) ? SchemaSelector.fromJSON(object.value) : undefined,
     };
@@ -2340,11 +2502,15 @@ export const Requirements_SchemasEntry: MessageFns<Requirements_SchemasEntry> = 
   },
 };
 
+messageTypeRegistry.set(Requirements_SchemasEntry.$type, Requirements_SchemasEntry);
+
 function createBaseSchemaSelector(): SchemaSelector {
-  return { apiVersion: "", kind: "" };
+  return { $type: "apiextensions.fn.proto.v1.SchemaSelector", apiVersion: "", kind: "" };
 }
 
-export const SchemaSelector: MessageFns<SchemaSelector> = {
+export const SchemaSelector: MessageFns<SchemaSelector, "apiextensions.fn.proto.v1.SchemaSelector"> = {
+  $type: "apiextensions.fn.proto.v1.SchemaSelector" as const,
+
   encode(message: SchemaSelector, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.apiVersion !== "") {
       writer.uint32(10).string(message.apiVersion);
@@ -2389,6 +2555,7 @@ export const SchemaSelector: MessageFns<SchemaSelector> = {
 
   fromJSON(object: any): SchemaSelector {
     return {
+      $type: SchemaSelector.$type,
       apiVersion: isSet(object.apiVersion)
         ? globalThis.String(object.apiVersion)
         : isSet(object.api_version)
@@ -2420,11 +2587,15 @@ export const SchemaSelector: MessageFns<SchemaSelector> = {
   },
 };
 
+messageTypeRegistry.set(SchemaSelector.$type, SchemaSelector);
+
 function createBaseSchema(): Schema {
-  return { openapiV3: undefined };
+  return { $type: "apiextensions.fn.proto.v1.Schema", openapiV3: undefined };
 }
 
-export const Schema: MessageFns<Schema> = {
+export const Schema: MessageFns<Schema, "apiextensions.fn.proto.v1.Schema"> = {
+  $type: "apiextensions.fn.proto.v1.Schema" as const,
+
   encode(message: Schema, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.openapiV3 !== undefined) {
       Struct.encode(Struct.wrap(message.openapiV3), writer.uint32(10).fork()).join();
@@ -2458,6 +2629,7 @@ export const Schema: MessageFns<Schema> = {
 
   fromJSON(object: any): Schema {
     return {
+      $type: Schema.$type,
       openapiV3: isObject(object.openapiV3)
         ? object.openapiV3
         : isObject(object.openapi_v3)
@@ -2484,11 +2656,22 @@ export const Schema: MessageFns<Schema> = {
   },
 };
 
+messageTypeRegistry.set(Schema.$type, Schema);
+
 function createBaseResourceSelector(): ResourceSelector {
-  return { apiVersion: "", kind: "", matchName: undefined, matchLabels: undefined, namespace: undefined };
+  return {
+    $type: "apiextensions.fn.proto.v1.ResourceSelector",
+    apiVersion: "",
+    kind: "",
+    matchName: undefined,
+    matchLabels: undefined,
+    namespace: undefined,
+  };
 }
 
-export const ResourceSelector: MessageFns<ResourceSelector> = {
+export const ResourceSelector: MessageFns<ResourceSelector, "apiextensions.fn.proto.v1.ResourceSelector"> = {
+  $type: "apiextensions.fn.proto.v1.ResourceSelector" as const,
+
   encode(message: ResourceSelector, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.apiVersion !== "") {
       writer.uint32(10).string(message.apiVersion);
@@ -2566,6 +2749,7 @@ export const ResourceSelector: MessageFns<ResourceSelector> = {
 
   fromJSON(object: any): ResourceSelector {
     return {
+      $type: ResourceSelector.$type,
       apiVersion: isSet(object.apiVersion)
         ? globalThis.String(object.apiVersion)
         : isSet(object.api_version)
@@ -2622,14 +2806,22 @@ export const ResourceSelector: MessageFns<ResourceSelector> = {
   },
 };
 
+messageTypeRegistry.set(ResourceSelector.$type, ResourceSelector);
+
 function createBaseMatchLabels(): MatchLabels {
-  return { labels: {} };
+  return { $type: "apiextensions.fn.proto.v1.MatchLabels", labels: {} };
 }
 
-export const MatchLabels: MessageFns<MatchLabels> = {
+export const MatchLabels: MessageFns<MatchLabels, "apiextensions.fn.proto.v1.MatchLabels"> = {
+  $type: "apiextensions.fn.proto.v1.MatchLabels" as const,
+
   encode(message: MatchLabels, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     globalThis.Object.entries(message.labels).forEach(([key, value]: [string, string]) => {
-      MatchLabels_LabelsEntry.encode({ key: key as any, value }, writer.uint32(10).fork()).join();
+      MatchLabels_LabelsEntry.encode({
+        $type: "apiextensions.fn.proto.v1.MatchLabels.LabelsEntry",
+        key: key as any,
+        value,
+      }, writer.uint32(10).fork()).join();
     });
     return writer;
   },
@@ -2663,8 +2855,9 @@ export const MatchLabels: MessageFns<MatchLabels> = {
 
   fromJSON(object: any): MatchLabels {
     return {
+      $type: MatchLabels.$type,
       labels: isObject(object.labels)
-        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.labels) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: string }, [key, value]: [string, any]) => {
             acc[key] = globalThis.String(value);
             return acc;
@@ -2678,7 +2871,7 @@ export const MatchLabels: MessageFns<MatchLabels> = {
   toJSON(message: MatchLabels): unknown {
     const obj: any = {};
     if (message.labels) {
-      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      const entries = globalThis.Object.entries(message.labels) as unknown as [string, string][];
       if (entries.length > 0) {
         obj.labels = {};
         entries.forEach(([k, v]) => {
@@ -2694,7 +2887,7 @@ export const MatchLabels: MessageFns<MatchLabels> = {
   },
   fromPartial<I extends Exact<DeepPartial<MatchLabels>, I>>(object: I): MatchLabels {
     const message = createBaseMatchLabels();
-    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as unknown as [string, string][]).reduce(
       (acc: { [key: string]: string }, [key, value]: [string, string]) => {
         if (value !== undefined) {
           acc[key] = globalThis.String(value);
@@ -2707,11 +2900,18 @@ export const MatchLabels: MessageFns<MatchLabels> = {
   },
 };
 
+messageTypeRegistry.set(MatchLabels.$type, MatchLabels);
+
 function createBaseMatchLabels_LabelsEntry(): MatchLabels_LabelsEntry {
-  return { key: "", value: "" };
+  return { $type: "apiextensions.fn.proto.v1.MatchLabels.LabelsEntry", key: "", value: "" };
 }
 
-export const MatchLabels_LabelsEntry: MessageFns<MatchLabels_LabelsEntry> = {
+export const MatchLabels_LabelsEntry: MessageFns<
+  MatchLabels_LabelsEntry,
+  "apiextensions.fn.proto.v1.MatchLabels.LabelsEntry"
+> = {
+  $type: "apiextensions.fn.proto.v1.MatchLabels.LabelsEntry" as const,
+
   encode(message: MatchLabels_LabelsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.key !== "") {
       writer.uint32(10).string(message.key);
@@ -2756,6 +2956,7 @@ export const MatchLabels_LabelsEntry: MessageFns<MatchLabels_LabelsEntry> = {
 
   fromJSON(object: any): MatchLabels_LabelsEntry {
     return {
+      $type: MatchLabels_LabelsEntry.$type,
       key: isSet(object.key) ? globalThis.String(object.key) : "",
       value: isSet(object.value) ? globalThis.String(object.value) : "",
     };
@@ -2783,11 +2984,15 @@ export const MatchLabels_LabelsEntry: MessageFns<MatchLabels_LabelsEntry> = {
   },
 };
 
+messageTypeRegistry.set(MatchLabels_LabelsEntry.$type, MatchLabels_LabelsEntry);
+
 function createBaseResponseMeta(): ResponseMeta {
-  return { tag: "", ttl: undefined };
+  return { $type: "apiextensions.fn.proto.v1.ResponseMeta", tag: "", ttl: undefined };
 }
 
-export const ResponseMeta: MessageFns<ResponseMeta> = {
+export const ResponseMeta: MessageFns<ResponseMeta, "apiextensions.fn.proto.v1.ResponseMeta"> = {
+  $type: "apiextensions.fn.proto.v1.ResponseMeta" as const,
+
   encode(message: ResponseMeta, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.tag !== "") {
       writer.uint32(10).string(message.tag);
@@ -2832,6 +3037,7 @@ export const ResponseMeta: MessageFns<ResponseMeta> = {
 
   fromJSON(object: any): ResponseMeta {
     return {
+      $type: ResponseMeta.$type,
       tag: isSet(object.tag) ? globalThis.String(object.tag) : "",
       ttl: isSet(object.ttl) ? Duration.fromJSON(object.ttl) : undefined,
     };
@@ -2859,17 +3065,24 @@ export const ResponseMeta: MessageFns<ResponseMeta> = {
   },
 };
 
+messageTypeRegistry.set(ResponseMeta.$type, ResponseMeta);
+
 function createBaseState(): State {
-  return { composite: undefined, resources: {} };
+  return { $type: "apiextensions.fn.proto.v1.State", composite: undefined, resources: {} };
 }
 
-export const State: MessageFns<State> = {
+export const State: MessageFns<State, "apiextensions.fn.proto.v1.State"> = {
+  $type: "apiextensions.fn.proto.v1.State" as const,
+
   encode(message: State, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.composite !== undefined) {
       Resource.encode(message.composite, writer.uint32(10).fork()).join();
     }
     globalThis.Object.entries(message.resources).forEach(([key, value]: [string, Resource]) => {
-      State_ResourcesEntry.encode({ key: key as any, value }, writer.uint32(18).fork()).join();
+      State_ResourcesEntry.encode(
+        { $type: "apiextensions.fn.proto.v1.State.ResourcesEntry", key: key as any, value },
+        writer.uint32(18).fork(),
+      ).join();
     });
     return writer;
   },
@@ -2911,9 +3124,10 @@ export const State: MessageFns<State> = {
 
   fromJSON(object: any): State {
     return {
+      $type: State.$type,
       composite: isSet(object.composite) ? Resource.fromJSON(object.composite) : undefined,
       resources: isObject(object.resources)
-        ? (globalThis.Object.entries(object.resources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.resources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Resource }, [key, value]: [string, any]) => {
             acc[key] = Resource.fromJSON(value);
             return acc;
@@ -2930,7 +3144,7 @@ export const State: MessageFns<State> = {
       obj.composite = Resource.toJSON(message.composite);
     }
     if (message.resources) {
-      const entries = globalThis.Object.entries(message.resources) as [string, Resource][];
+      const entries = globalThis.Object.entries(message.resources) as unknown as [string, Resource][];
       if (entries.length > 0) {
         obj.resources = {};
         entries.forEach(([k, v]) => {
@@ -2949,7 +3163,7 @@ export const State: MessageFns<State> = {
     message.composite = (object.composite !== undefined && object.composite !== null)
       ? Resource.fromPartial(object.composite)
       : undefined;
-    message.resources = (globalThis.Object.entries(object.resources ?? {}) as [string, Resource][]).reduce(
+    message.resources = (globalThis.Object.entries(object.resources ?? {}) as unknown as [string, Resource][]).reduce(
       (acc: { [key: string]: Resource }, [key, value]: [string, Resource]) => {
         if (value !== undefined) {
           acc[key] = Resource.fromPartial(value);
@@ -2962,95 +3176,109 @@ export const State: MessageFns<State> = {
   },
 };
 
+messageTypeRegistry.set(State.$type, State);
+
 function createBaseState_ResourcesEntry(): State_ResourcesEntry {
-  return { key: "", value: undefined };
+  return { $type: "apiextensions.fn.proto.v1.State.ResourcesEntry", key: "", value: undefined };
 }
 
-export const State_ResourcesEntry: MessageFns<State_ResourcesEntry> = {
-  encode(message: State_ResourcesEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.key !== "") {
-      writer.uint32(10).string(message.key);
-    }
-    if (message.value !== undefined) {
-      Resource.encode(message.value, writer.uint32(18).fork()).join();
-    }
-    return writer;
-  },
+export const State_ResourcesEntry: MessageFns<State_ResourcesEntry, "apiextensions.fn.proto.v1.State.ResourcesEntry"> =
+  {
+    $type: "apiextensions.fn.proto.v1.State.ResourcesEntry" as const,
 
-  decode(input: BinaryReader | Uint8Array, length?: number): State_ResourcesEntry {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseState_ResourcesEntry();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.key = reader.string();
-          continue;
-        }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
-
-          message.value = Resource.decode(reader, reader.uint32());
-          continue;
-        }
+    encode(message: State_ResourcesEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+      if (message.key !== "") {
+        writer.uint32(10).string(message.key);
       }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
+      if (message.value !== undefined) {
+        Resource.encode(message.value, writer.uint32(18).fork()).join();
       }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
+      return writer;
+    },
 
-  fromJSON(object: any): State_ResourcesEntry {
-    return {
-      key: isSet(object.key) ? globalThis.String(object.key) : "",
-      value: isSet(object.value) ? Resource.fromJSON(object.value) : undefined,
-    };
-  },
+    decode(input: BinaryReader | Uint8Array, length?: number): State_ResourcesEntry {
+      const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseState_ResourcesEntry();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
 
-  toJSON(message: State_ResourcesEntry): unknown {
-    const obj: any = {};
-    if (message.key !== "") {
-      obj.key = message.key;
-    }
-    if (message.value !== undefined) {
-      obj.value = Resource.toJSON(message.value);
-    }
-    return obj;
-  },
+            message.key = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
 
-  create<I extends Exact<DeepPartial<State_ResourcesEntry>, I>>(base?: I): State_ResourcesEntry {
-    return State_ResourcesEntry.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<State_ResourcesEntry>, I>>(object: I): State_ResourcesEntry {
-    const message = createBaseState_ResourcesEntry();
-    message.key = object.key ?? "";
-    message.value = (object.value !== undefined && object.value !== null)
-      ? Resource.fromPartial(object.value)
-      : undefined;
-    return message;
-  },
-};
+            message.value = Resource.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    },
+
+    fromJSON(object: any): State_ResourcesEntry {
+      return {
+        $type: State_ResourcesEntry.$type,
+        key: isSet(object.key) ? globalThis.String(object.key) : "",
+        value: isSet(object.value) ? Resource.fromJSON(object.value) : undefined,
+      };
+    },
+
+    toJSON(message: State_ResourcesEntry): unknown {
+      const obj: any = {};
+      if (message.key !== "") {
+        obj.key = message.key;
+      }
+      if (message.value !== undefined) {
+        obj.value = Resource.toJSON(message.value);
+      }
+      return obj;
+    },
+
+    create<I extends Exact<DeepPartial<State_ResourcesEntry>, I>>(base?: I): State_ResourcesEntry {
+      return State_ResourcesEntry.fromPartial(base ?? ({} as any));
+    },
+    fromPartial<I extends Exact<DeepPartial<State_ResourcesEntry>, I>>(object: I): State_ResourcesEntry {
+      const message = createBaseState_ResourcesEntry();
+      message.key = object.key ?? "";
+      message.value = (object.value !== undefined && object.value !== null)
+        ? Resource.fromPartial(object.value)
+        : undefined;
+      return message;
+    },
+  };
+
+messageTypeRegistry.set(State_ResourcesEntry.$type, State_ResourcesEntry);
 
 function createBaseResource(): Resource {
-  return { resource: undefined, connectionDetails: {}, ready: 0 };
+  return { $type: "apiextensions.fn.proto.v1.Resource", resource: undefined, connectionDetails: {}, ready: 0 };
 }
 
-export const Resource: MessageFns<Resource> = {
+export const Resource: MessageFns<Resource, "apiextensions.fn.proto.v1.Resource"> = {
+  $type: "apiextensions.fn.proto.v1.Resource" as const,
+
   encode(message: Resource, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.resource !== undefined) {
       Struct.encode(Struct.wrap(message.resource), writer.uint32(10).fork()).join();
     }
     globalThis.Object.entries(message.connectionDetails).forEach(([key, value]: [string, Buffer]) => {
-      Resource_ConnectionDetailsEntry.encode({ key: key as any, value }, writer.uint32(18).fork()).join();
+      Resource_ConnectionDetailsEntry.encode({
+        $type: "apiextensions.fn.proto.v1.Resource.ConnectionDetailsEntry",
+        key: key as any,
+        value,
+      }, writer.uint32(18).fork()).join();
     });
     if (message.ready !== 0) {
       writer.uint32(24).int32(message.ready);
@@ -3103,9 +3331,10 @@ export const Resource: MessageFns<Resource> = {
 
   fromJSON(object: any): Resource {
     return {
+      $type: Resource.$type,
       resource: isObject(object.resource) ? object.resource : undefined,
       connectionDetails: isObject(object.connectionDetails)
-        ? (globalThis.Object.entries(object.connectionDetails) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.connectionDetails) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Buffer }, [key, value]: [string, any]) => {
             acc[key] = Buffer.from(bytesFromBase64(value as string));
             return acc;
@@ -3113,7 +3342,7 @@ export const Resource: MessageFns<Resource> = {
           {},
         )
         : isObject(object.connection_details)
-        ? (globalThis.Object.entries(object.connection_details) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.connection_details) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Buffer }, [key, value]: [string, any]) => {
             acc[key] = Buffer.from(bytesFromBase64(value as string));
             return acc;
@@ -3131,7 +3360,7 @@ export const Resource: MessageFns<Resource> = {
       obj.resource = message.resource;
     }
     if (message.connectionDetails) {
-      const entries = globalThis.Object.entries(message.connectionDetails) as [string, Buffer][];
+      const entries = globalThis.Object.entries(message.connectionDetails) as unknown as [string, Buffer][];
       if (entries.length > 0) {
         obj.connectionDetails = {};
         entries.forEach(([k, v]) => {
@@ -3151,23 +3380,33 @@ export const Resource: MessageFns<Resource> = {
   fromPartial<I extends Exact<DeepPartial<Resource>, I>>(object: I): Resource {
     const message = createBaseResource();
     message.resource = object.resource ?? undefined;
-    message.connectionDetails = (globalThis.Object.entries(object.connectionDetails ?? {}) as [string, Buffer][])
-      .reduce((acc: { [key: string]: Buffer }, [key, value]: [string, Buffer]) => {
-        if (value !== undefined) {
-          acc[key] = value;
-        }
-        return acc;
-      }, {});
+    message.connectionDetails =
+      (globalThis.Object.entries(object.connectionDetails ?? {}) as unknown as [string, Buffer][]).reduce(
+        (acc: { [key: string]: Buffer }, [key, value]: [string, Buffer]) => {
+          if (value !== undefined) {
+            acc[key] = value;
+          }
+          return acc;
+        },
+        {},
+      );
     message.ready = object.ready ?? 0;
     return message;
   },
 };
 
+messageTypeRegistry.set(Resource.$type, Resource);
+
 function createBaseResource_ConnectionDetailsEntry(): Resource_ConnectionDetailsEntry {
-  return { key: "", value: Buffer.alloc(0) };
+  return { $type: "apiextensions.fn.proto.v1.Resource.ConnectionDetailsEntry", key: "", value: Buffer.alloc(0) };
 }
 
-export const Resource_ConnectionDetailsEntry: MessageFns<Resource_ConnectionDetailsEntry> = {
+export const Resource_ConnectionDetailsEntry: MessageFns<
+  Resource_ConnectionDetailsEntry,
+  "apiextensions.fn.proto.v1.Resource.ConnectionDetailsEntry"
+> = {
+  $type: "apiextensions.fn.proto.v1.Resource.ConnectionDetailsEntry" as const,
+
   encode(message: Resource_ConnectionDetailsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.key !== "") {
       writer.uint32(10).string(message.key);
@@ -3212,6 +3451,7 @@ export const Resource_ConnectionDetailsEntry: MessageFns<Resource_ConnectionDeta
 
   fromJSON(object: any): Resource_ConnectionDetailsEntry {
     return {
+      $type: Resource_ConnectionDetailsEntry.$type,
       key: isSet(object.key) ? globalThis.String(object.key) : "",
       value: isSet(object.value) ? Buffer.from(bytesFromBase64(object.value)) : Buffer.alloc(0),
     };
@@ -3241,11 +3481,15 @@ export const Resource_ConnectionDetailsEntry: MessageFns<Resource_ConnectionDeta
   },
 };
 
+messageTypeRegistry.set(Resource_ConnectionDetailsEntry.$type, Resource_ConnectionDetailsEntry);
+
 function createBaseResult(): Result {
-  return { severity: 0, message: "", reason: undefined, target: undefined };
+  return { $type: "apiextensions.fn.proto.v1.Result", severity: 0, message: "", reason: undefined, target: undefined };
 }
 
-export const Result: MessageFns<Result> = {
+export const Result: MessageFns<Result, "apiextensions.fn.proto.v1.Result"> = {
+  $type: "apiextensions.fn.proto.v1.Result" as const,
+
   encode(message: Result, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.severity !== 0) {
       writer.uint32(8).int32(message.severity);
@@ -3312,6 +3556,7 @@ export const Result: MessageFns<Result> = {
 
   fromJSON(object: any): Result {
     return {
+      $type: Result.$type,
       severity: isSet(object.severity) ? severityFromJSON(object.severity) : 0,
       message: isSet(object.message) ? globalThis.String(object.message) : "",
       reason: isSet(object.reason) ? globalThis.String(object.reason) : undefined,
@@ -3349,11 +3594,22 @@ export const Result: MessageFns<Result> = {
   },
 };
 
+messageTypeRegistry.set(Result.$type, Result);
+
 function createBaseCondition(): Condition {
-  return { type: "", status: 0, reason: "", message: undefined, target: undefined };
+  return {
+    $type: "apiextensions.fn.proto.v1.Condition",
+    type: "",
+    status: 0,
+    reason: "",
+    message: undefined,
+    target: undefined,
+  };
 }
 
-export const Condition: MessageFns<Condition> = {
+export const Condition: MessageFns<Condition, "apiextensions.fn.proto.v1.Condition"> = {
+  $type: "apiextensions.fn.proto.v1.Condition" as const,
+
   encode(message: Condition, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.type !== "") {
       writer.uint32(10).string(message.type);
@@ -3431,6 +3687,7 @@ export const Condition: MessageFns<Condition> = {
 
   fromJSON(object: any): Condition {
     return {
+      $type: Condition.$type,
       type: isSet(object.type) ? globalThis.String(object.type) : "",
       status: isSet(object.status) ? statusFromJSON(object.status) : 0,
       reason: isSet(object.reason) ? globalThis.String(object.reason) : "",
@@ -3472,6 +3729,8 @@ export const Condition: MessageFns<Condition> = {
     return message;
   },
 };
+
+messageTypeRegistry.set(Condition.$type, Condition);
 
 /** A FunctionRunnerService is a function. */
 export type FunctionRunnerServiceService = typeof FunctionRunnerServiceService;
@@ -3543,12 +3802,12 @@ type Builtin = Date | Function | Uint8Array | string | number | boolean | undefi
 export type DeepPartial<T> = T extends Builtin ? T
   : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
   : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
-  : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
+  : T extends {} ? { [K in Exclude<keyof T, "$type">]?: DeepPartial<T[K]> }
   : Partial<T>;
 
 type KeysOfUnion<T> = T extends T ? keyof T : never;
 export type Exact<P, I extends P> = P extends Builtin ? P
-  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
+  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P> | "$type">]: never };
 
 function isObject(value: any): boolean {
   return typeof value === "object" && value !== null;
@@ -3558,7 +3817,8 @@ function isSet(value: any): boolean {
   return value !== null && value !== undefined;
 }
 
-export interface MessageFns<T> {
+export interface MessageFns<T, V extends string> {
+  readonly $type: V;
   encode(message: T, writer?: BinaryWriter): BinaryWriter;
   decode(input: BinaryReader | Uint8Array, length?: number): T;
   fromJSON(object: any): T;

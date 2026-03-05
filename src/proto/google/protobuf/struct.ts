@@ -6,6 +6,7 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
+import { messageTypeRegistry } from "../../typeRegistry.js";
 
 export const protobufPackage = "google.protobuf";
 
@@ -54,11 +55,13 @@ export function nullValueToJSON(object: NullValue): string {
  * The JSON representation for `Struct` is JSON object.
  */
 export interface Struct {
+  $type: "google.protobuf.Struct";
   /** Unordered map of dynamically typed values. */
   fields: { [key: string]: any | undefined };
 }
 
 export interface Struct_FieldsEntry {
+  $type: "google.protobuf.Struct.FieldsEntry";
   key: string;
   value: any | undefined;
 }
@@ -72,6 +75,7 @@ export interface Struct_FieldsEntry {
  * The JSON representation for `Value` is JSON value.
  */
 export interface Value {
+  $type: "google.protobuf.Value";
   /** Represents a null value. */
   nullValue?:
     | NullValue
@@ -102,19 +106,25 @@ export interface Value {
  * The JSON representation for `ListValue` is JSON array.
  */
 export interface ListValue {
+  $type: "google.protobuf.ListValue";
   /** Repeated field of dynamically typed values. */
   values: any[];
 }
 
 function createBaseStruct(): Struct {
-  return { fields: {} };
+  return { $type: "google.protobuf.Struct", fields: {} };
 }
 
-export const Struct: MessageFns<Struct> & StructWrapperFns = {
+export const Struct: MessageFns<Struct, "google.protobuf.Struct"> & StructWrapperFns = {
+  $type: "google.protobuf.Struct" as const,
+
   encode(message: Struct, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     globalThis.Object.entries(message.fields).forEach(([key, value]: [string, any | undefined]) => {
       if (value !== undefined) {
-        Struct_FieldsEntry.encode({ key: key as any, value }, writer.uint32(10).fork()).join();
+        Struct_FieldsEntry.encode(
+          { $type: "google.protobuf.Struct.FieldsEntry", key: key as any, value },
+          writer.uint32(10).fork(),
+        ).join();
       }
     });
     return writer;
@@ -149,8 +159,9 @@ export const Struct: MessageFns<Struct> & StructWrapperFns = {
 
   fromJSON(object: any): Struct {
     return {
+      $type: Struct.$type,
       fields: isObject(object.fields)
-        ? (globalThis.Object.entries(object.fields) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.fields) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: any | undefined }, [key, value]: [string, any]) => {
             acc[key] = value as any | undefined;
             return acc;
@@ -164,7 +175,7 @@ export const Struct: MessageFns<Struct> & StructWrapperFns = {
   toJSON(message: Struct): unknown {
     const obj: any = {};
     if (message.fields) {
-      const entries = globalThis.Object.entries(message.fields) as [string, any | undefined][];
+      const entries = globalThis.Object.entries(message.fields) as unknown as [string, any | undefined][];
       if (entries.length > 0) {
         obj.fields = {};
         entries.forEach(([k, v]) => {
@@ -180,7 +191,7 @@ export const Struct: MessageFns<Struct> & StructWrapperFns = {
   },
   fromPartial<I extends Exact<DeepPartial<Struct>, I>>(object: I): Struct {
     const message = createBaseStruct();
-    message.fields = (globalThis.Object.entries(object.fields ?? {}) as [string, any | undefined][]).reduce(
+    message.fields = (globalThis.Object.entries(object.fields ?? {}) as unknown as [string, any | undefined][]).reduce(
       (acc: { [key: string]: any | undefined }, [key, value]: [string, any | undefined]) => {
         if (value !== undefined) {
           acc[key] = value;
@@ -214,11 +225,15 @@ export const Struct: MessageFns<Struct> & StructWrapperFns = {
   },
 };
 
+messageTypeRegistry.set(Struct.$type, Struct);
+
 function createBaseStruct_FieldsEntry(): Struct_FieldsEntry {
-  return { key: "", value: undefined };
+  return { $type: "google.protobuf.Struct.FieldsEntry", key: "", value: undefined };
 }
 
-export const Struct_FieldsEntry: MessageFns<Struct_FieldsEntry> = {
+export const Struct_FieldsEntry: MessageFns<Struct_FieldsEntry, "google.protobuf.Struct.FieldsEntry"> = {
+  $type: "google.protobuf.Struct.FieldsEntry" as const,
+
   encode(message: Struct_FieldsEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.key !== "") {
       writer.uint32(10).string(message.key);
@@ -263,6 +278,7 @@ export const Struct_FieldsEntry: MessageFns<Struct_FieldsEntry> = {
 
   fromJSON(object: any): Struct_FieldsEntry {
     return {
+      $type: Struct_FieldsEntry.$type,
       key: isSet(object.key) ? globalThis.String(object.key) : "",
       value: isSet(object?.value) ? object.value : undefined,
     };
@@ -290,8 +306,11 @@ export const Struct_FieldsEntry: MessageFns<Struct_FieldsEntry> = {
   },
 };
 
+messageTypeRegistry.set(Struct_FieldsEntry.$type, Struct_FieldsEntry);
+
 function createBaseValue(): Value {
   return {
+    $type: "google.protobuf.Value",
     nullValue: undefined,
     numberValue: undefined,
     stringValue: undefined,
@@ -301,7 +320,9 @@ function createBaseValue(): Value {
   };
 }
 
-export const Value: MessageFns<Value> & AnyValueWrapperFns = {
+export const Value: MessageFns<Value, "google.protobuf.Value"> & AnyValueWrapperFns = {
+  $type: "google.protobuf.Value" as const,
+
   encode(message: Value, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.nullValue !== undefined) {
       writer.uint32(8).int32(message.nullValue);
@@ -390,6 +411,7 @@ export const Value: MessageFns<Value> & AnyValueWrapperFns = {
 
   fromJSON(object: any): Value {
     return {
+      $type: Value.$type,
       nullValue: isSet(object.nullValue)
         ? nullValueFromJSON(object.nullValue)
         : isSet(object.null_value)
@@ -498,11 +520,15 @@ export const Value: MessageFns<Value> & AnyValueWrapperFns = {
   },
 };
 
+messageTypeRegistry.set(Value.$type, Value);
+
 function createBaseListValue(): ListValue {
-  return { values: [] };
+  return { $type: "google.protobuf.ListValue", values: [] };
 }
 
-export const ListValue: MessageFns<ListValue> & ListValueWrapperFns = {
+export const ListValue: MessageFns<ListValue, "google.protobuf.ListValue"> & ListValueWrapperFns = {
+  $type: "google.protobuf.ListValue" as const,
+
   encode(message: ListValue, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     for (const v of message.values) {
       Value.encode(Value.wrap(v!), writer.uint32(10).fork()).join();
@@ -535,7 +561,7 @@ export const ListValue: MessageFns<ListValue> & ListValueWrapperFns = {
   },
 
   fromJSON(object: any): ListValue {
-    return { values: globalThis.Array.isArray(object?.values) ? [...object.values] : [] };
+    return { $type: ListValue.$type, values: globalThis.Array.isArray(object?.values) ? [...object.values] : [] };
   },
 
   toJSON(message: ListValue): unknown {
@@ -570,6 +596,8 @@ export const ListValue: MessageFns<ListValue> & ListValueWrapperFns = {
   },
 };
 
+messageTypeRegistry.set(ListValue.$type, ListValue);
+
 export interface DataLoaderOptions {
   cache?: boolean;
 }
@@ -584,12 +612,12 @@ type Builtin = Date | Function | Uint8Array | string | number | boolean | undefi
 export type DeepPartial<T> = T extends Builtin ? T
   : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
   : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
-  : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
+  : T extends {} ? { [K in Exclude<keyof T, "$type">]?: DeepPartial<T[K]> }
   : Partial<T>;
 
 type KeysOfUnion<T> = T extends T ? keyof T : never;
 export type Exact<P, I extends P> = P extends Builtin ? P
-  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
+  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P> | "$type">]: never };
 
 function isObject(value: any): boolean {
   return typeof value === "object" && value !== null;
@@ -599,7 +627,8 @@ function isSet(value: any): boolean {
   return value !== null && value !== undefined;
 }
 
-export interface MessageFns<T> {
+export interface MessageFns<T, V extends string> {
+  readonly $type: V;
   encode(message: T, writer?: BinaryWriter): BinaryWriter;
   decode(input: BinaryReader | Uint8Array, length?: number): T;
   fromJSON(object: any): T;
