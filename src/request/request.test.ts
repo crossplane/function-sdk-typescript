@@ -11,6 +11,9 @@ import {
   getRequiredResource,
   getRequiredSchema,
   getRequiredSchemas,
+  advertiseCapabilities,
+  hasCapability,
+  getWatchedResource,
 } from './request.js';
 import type {
   RunFunctionRequest,
@@ -18,6 +21,7 @@ import type {
   Resources,
   Credentials,
 } from '../proto/run_function.js';
+import { Capability } from '../proto/run_function.js';
 
 describe('getDesiredCompositeResource', () => {
   it('should return undefined when no desired composite exists', () => {
@@ -1104,5 +1108,441 @@ describe('getRequiredSchema', () => {
     const [schema, resolved] = getRequiredSchema(req, 'not-found');
     expect(resolved).toBe(true);
     expect(schema).toBeUndefined();
+  });
+});
+
+describe('advertiseCapabilities', () => {
+  it('should return false when meta is undefined', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    expect(advertiseCapabilities(req)).toBe(false);
+  });
+
+  it('should return false when meta exists without CAPABILITY_CAPABILITIES', () => {
+    const req: RunFunctionRequest = {
+      meta: {
+        tag: 'test',
+        capabilities: [Capability.CAPABILITY_REQUIRED_RESOURCES],
+      },
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    expect(advertiseCapabilities(req)).toBe(false);
+  });
+
+  it('should return false when capabilities is empty array', () => {
+    const req: RunFunctionRequest = {
+      meta: {
+        tag: 'test',
+        capabilities: [],
+      },
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    expect(advertiseCapabilities(req)).toBe(false);
+  });
+
+  it('should return false when capabilities present but CAPABILITY_CAPABILITIES not included', () => {
+    const req: RunFunctionRequest = {
+      meta: {
+        tag: 'test',
+        capabilities: [Capability.CAPABILITY_REQUIRED_RESOURCES, Capability.CAPABILITY_CONDITIONS],
+      },
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    expect(advertiseCapabilities(req)).toBe(false);
+  });
+
+  it('should return true when CAPABILITY_CAPABILITIES is present', () => {
+    const req: RunFunctionRequest = {
+      meta: {
+        tag: 'test',
+        capabilities: [Capability.CAPABILITY_CAPABILITIES],
+      },
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    expect(advertiseCapabilities(req)).toBe(true);
+  });
+
+  it('should return true when CAPABILITY_CAPABILITIES is present among other capabilities', () => {
+    const req: RunFunctionRequest = {
+      meta: {
+        tag: 'test',
+        capabilities: [
+          Capability.CAPABILITY_CAPABILITIES,
+          Capability.CAPABILITY_REQUIRED_RESOURCES,
+          Capability.CAPABILITY_CONDITIONS,
+          Capability.CAPABILITY_REQUIRED_SCHEMAS,
+        ],
+      },
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    expect(advertiseCapabilities(req)).toBe(true);
+  });
+});
+
+describe('hasCapability', () => {
+  it('should return false when meta is undefined', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    expect(hasCapability(req, Capability.CAPABILITY_REQUIRED_RESOURCES)).toBe(false);
+  });
+
+  it('should return false when requested capability is absent', () => {
+    const req: RunFunctionRequest = {
+      meta: {
+        tag: 'test',
+        capabilities: [Capability.CAPABILITY_CONDITIONS],
+      },
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    expect(hasCapability(req, Capability.CAPABILITY_REQUIRED_RESOURCES)).toBe(false);
+  });
+
+  it('should return false when capabilities is empty array', () => {
+    const req: RunFunctionRequest = {
+      meta: {
+        tag: 'test',
+        capabilities: [],
+      },
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    expect(hasCapability(req, Capability.CAPABILITY_REQUIRED_RESOURCES)).toBe(false);
+  });
+
+  it('should return false when requested capability is not present', () => {
+    const req: RunFunctionRequest = {
+      meta: {
+        tag: 'test',
+        capabilities: [Capability.CAPABILITY_CAPABILITIES, Capability.CAPABILITY_CONDITIONS],
+      },
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    expect(hasCapability(req, Capability.CAPABILITY_REQUIRED_RESOURCES)).toBe(false);
+  });
+
+  it('should return true when requested capability is present', () => {
+    const req: RunFunctionRequest = {
+      meta: {
+        tag: 'test',
+        capabilities: [
+          Capability.CAPABILITY_CAPABILITIES,
+          Capability.CAPABILITY_REQUIRED_RESOURCES,
+        ],
+      },
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    expect(hasCapability(req, Capability.CAPABILITY_REQUIRED_RESOURCES)).toBe(true);
+  });
+
+  it('should work with all capability types', () => {
+    const req: RunFunctionRequest = {
+      meta: {
+        tag: 'test',
+        capabilities: [
+          Capability.CAPABILITY_CAPABILITIES,
+          Capability.CAPABILITY_REQUIRED_RESOURCES,
+          Capability.CAPABILITY_CREDENTIALS,
+          Capability.CAPABILITY_CONDITIONS,
+          Capability.CAPABILITY_REQUIRED_SCHEMAS,
+        ],
+      },
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    expect(hasCapability(req, Capability.CAPABILITY_CAPABILITIES)).toBe(true);
+    expect(hasCapability(req, Capability.CAPABILITY_REQUIRED_RESOURCES)).toBe(true);
+    expect(hasCapability(req, Capability.CAPABILITY_CREDENTIALS)).toBe(true);
+    expect(hasCapability(req, Capability.CAPABILITY_CONDITIONS)).toBe(true);
+    expect(hasCapability(req, Capability.CAPABILITY_REQUIRED_SCHEMAS)).toBe(true);
+    expect(hasCapability(req, Capability.CAPABILITY_UNSPECIFIED)).toBe(false);
+  });
+});
+
+describe('getWatchedResource', () => {
+  it('should return undefined when no required resources exist', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {},
+      requiredSchemas: {},
+    };
+
+    const result = getWatchedResource(req);
+    expect(result).toBeUndefined();
+  });
+
+  it('should return undefined when watched resource has no items', () => {
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {
+        'ops.crossplane.io/watched-resource': {
+          items: [],
+        },
+      },
+      requiredSchemas: {},
+    };
+
+    const result = getWatchedResource(req);
+    expect(result).toBeUndefined();
+  });
+
+  it('should return the watched resource when present', () => {
+    const watchedResource = {
+      apiVersion: 'v1',
+      kind: 'ConfigMap',
+      metadata: {
+        name: 'my-config',
+        namespace: 'default',
+      },
+      data: {
+        key: 'value',
+      },
+    };
+
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {
+        'ops.crossplane.io/watched-resource': {
+          items: [
+            {
+              resource: watchedResource,
+              connectionDetails: {},
+              ready: 0,
+            },
+          ],
+        },
+      },
+      requiredSchemas: {},
+    };
+
+    const result = getWatchedResource(req);
+    expect(result).toEqual(watchedResource);
+  });
+
+  it('should return the first resource when multiple resources exist', () => {
+    const firstResource = {
+      apiVersion: 'v1',
+      kind: 'ConfigMap',
+      metadata: {
+        name: 'first-config',
+      },
+    };
+
+    const secondResource = {
+      apiVersion: 'v1',
+      kind: 'ConfigMap',
+      metadata: {
+        name: 'second-config',
+      },
+    };
+
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {
+        'ops.crossplane.io/watched-resource': {
+          items: [
+            {
+              resource: firstResource,
+              connectionDetails: {},
+              ready: 0,
+            },
+            {
+              resource: secondResource,
+              connectionDetails: {},
+              ready: 0,
+            },
+          ],
+        },
+      },
+      requiredSchemas: {},
+    };
+
+    const result = getWatchedResource(req);
+    expect(result).toEqual(firstResource);
+  });
+
+  it('should handle watched resource with complex nested structure', () => {
+    const watchedResource = {
+      apiVersion: 'apps/v1',
+      kind: 'Deployment',
+      metadata: {
+        name: 'my-deployment',
+        namespace: 'production',
+        labels: {
+          app: 'web',
+          env: 'prod',
+        },
+      },
+      spec: {
+        replicas: 3,
+        selector: {
+          matchLabels: {
+            app: 'web',
+          },
+        },
+        template: {
+          spec: {
+            containers: [
+              {
+                name: 'app',
+                image: 'nginx:latest',
+              },
+            ],
+          },
+        },
+      },
+      status: {
+        readyReplicas: 3,
+      },
+    };
+
+    const req: RunFunctionRequest = {
+      meta: undefined,
+      observed: undefined,
+      desired: undefined,
+      input: undefined,
+      context: undefined,
+      extraResources: {},
+      credentials: {},
+      requiredResources: {
+        'ops.crossplane.io/watched-resource': {
+          items: [
+            {
+              resource: watchedResource,
+              connectionDetails: {},
+              ready: 1,
+            },
+          ],
+        },
+      },
+      requiredSchemas: {},
+    };
+
+    const result = getWatchedResource(req);
+    expect(result).toEqual(watchedResource);
+    expect(result?.metadata).toEqual(watchedResource.metadata);
+    expect(result?.spec).toEqual(watchedResource.spec);
+    expect(result?.status).toEqual(watchedResource.status);
   });
 });

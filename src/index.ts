@@ -6,6 +6,7 @@ export { FunctionRunner, getServer } from './function/function.js';
 
 // Request helpers
 export {
+  advertiseCapabilities,
   getContextKey,
   getCredentials,
   getDesiredComposedResources,
@@ -17,6 +18,8 @@ export {
   getRequiredResources,
   getRequiredSchema,
   getRequiredSchemas,
+  getWatchedResource,
+  hasCapability,
 } from './request/request.js';
 
 // Response helpers
@@ -43,15 +46,19 @@ export {
   asObject,
   asStruct,
   type Composite,
+  type Condition as ResourceCondition,
   type ConnectionDetails,
   type DesiredComposed,
   fromModel,
   fromObject,
+  getCondition,
+  type MergeOptions,
   mustStructJSON,
   mustStructObject,
   newDesiredComposed,
   type ObservedComposed,
   toObject,
+  update as updateResource,
 } from './resource/resource.js';
 
 // Runtime utilities

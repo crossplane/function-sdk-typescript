@@ -6,7 +6,13 @@
  * required resources, and credentials.
  */
 
-import { Credentials, Resource, Resources, RunFunctionRequest } from '../proto/run_function.js';
+import {
+  Capability,
+  Credentials,
+  Resource,
+  Resources,
+  RunFunctionRequest,
+} from '../proto/run_function.js';
 
 /**
  * Get the desired composite resource (XR) from the request.
@@ -365,4 +371,96 @@ export function getRequiredSchema(
   }
 
   return [schema.openapiV3, true];
+}
+
+/**
+ * Check whether Crossplane advertises its capabilities.
+ *
+ * Crossplane v2.2 and later advertise their capabilities in the request
+ * metadata. If this returns false, the calling Crossplane predates capability
+ * advertisement and hasCapability will always return false, even for features
+ * the older Crossplane does support.
+ *
+ * @param req - The RunFunctionRequest to check
+ * @returns true if Crossplane advertises its capabilities
+ *
+ * @example
+ * ```typescript
+ * if (!advertiseCapabilities(req)) {
+ *   // Pre-v2.2 Crossplane, capabilities are unknown
+ *   console.log("Crossplane version predates capability advertisement");
+ * } else if (hasCapability(req, Capability.CAPABILITY_REQUIRED_SCHEMAS)) {
+ *   requireSchema(rsp, "xr", xrApiVersion, xrKind);
+ * }
+ * ```
+ */
+export function advertiseCapabilities(req: RunFunctionRequest): boolean {
+  if (!req.meta?.capabilities) {
+    return false;
+  }
+  return req.meta.capabilities.includes(Capability.CAPABILITY_CAPABILITIES);
+}
+
+/**
+ * Check whether Crossplane advertises a particular capability.
+ *
+ * Crossplane sends its capabilities in the request metadata. Functions can use
+ * this to determine whether Crossplane will honor certain fields in their
+ * response, or populate certain fields in their request.
+ *
+ * Use advertiseCapabilities to check whether Crossplane advertises its
+ * capabilities at all. If it doesn't, hasCapability always returns false even
+ * for features the older Crossplane does support.
+ *
+ * @param req - The RunFunctionRequest to check
+ * @param cap - The capability to check for (e.g., Capability.CAPABILITY_REQUIRED_SCHEMAS)
+ * @returns true if the capability is present in the request metadata
+ *
+ * @example
+ * ```typescript
+ * import { Capability } from './proto/run_function.js';
+ *
+ * if (hasCapability(req, Capability.CAPABILITY_REQUIRED_SCHEMAS)) {
+ *   requireSchema(rsp, "xr", xrApiVersion, xrKind);
+ * }
+ *
+ * if (hasCapability(req, Capability.CAPABILITY_CONDITIONS)) {
+ *   // Safe to return status conditions
+ *   rsp.conditions = [{ type: "Ready", status: "True" }];
+ * }
+ * ```
+ */
+export function hasCapability(req: RunFunctionRequest, cap: Capability): boolean {
+  if (!req.meta?.capabilities) {
+    return false;
+  }
+  return req.meta.capabilities.includes(cap);
+}
+
+/**
+ * Get the watched resource that triggered this operation.
+ *
+ * When a WatchOperation creates an Operation, it injects the resource that
+ * changed using the special requirement name 'ops.crossplane.io/watched-resource'.
+ * This helper makes it easy to access that resource.
+ *
+ * @param req - The RunFunctionRequest to check for a watched resource
+ * @returns The watched resource object, or undefined if not found
+ *
+ * @example
+ * ```typescript
+ * // In an operation function triggered by a WatchOperation
+ * const watched = getWatchedResource(req);
+ * if (watched) {
+ *   console.log("Operation triggered by change to:", watched.metadata?.name);
+ *   console.log("Resource kind:", watched.kind);
+ * }
+ * ```
+ */
+export function getWatchedResource(req: RunFunctionRequest): Record<string, unknown> | undefined {
+  const [resources, resolved] = getRequiredResource(req, 'ops.crossplane.io/watched-resource');
+  if (!resolved || resources.length === 0) {
+    return undefined;
+  }
+  return resources[0].resource;
 }
