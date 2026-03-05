@@ -161,7 +161,7 @@ export const Struct: MessageFns<Struct, "google.protobuf.Struct"> & StructWrappe
     return {
       $type: Struct.$type,
       fields: isObject(object.fields)
-        ? (globalThis.Object.entries(object.fields) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.fields) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: any | undefined }, [key, value]: [string, any]) => {
             acc[key] = value as any | undefined;
             return acc;
@@ -175,7 +175,7 @@ export const Struct: MessageFns<Struct, "google.protobuf.Struct"> & StructWrappe
   toJSON(message: Struct): unknown {
     const obj: any = {};
     if (message.fields) {
-      const entries = globalThis.Object.entries(message.fields) as [string, any | undefined][];
+      const entries = globalThis.Object.entries(message.fields) as unknown as [string, any | undefined][];
       if (entries.length > 0) {
         obj.fields = {};
         entries.forEach(([k, v]) => {
@@ -191,7 +191,7 @@ export const Struct: MessageFns<Struct, "google.protobuf.Struct"> & StructWrappe
   },
   fromPartial<I extends Exact<DeepPartial<Struct>, I>>(object: I): Struct {
     const message = createBaseStruct();
-    message.fields = (globalThis.Object.entries(object.fields ?? {}) as [string, any | undefined][]).reduce(
+    message.fields = (globalThis.Object.entries(object.fields ?? {}) as unknown as [string, any | undefined][]).reduce(
       (acc: { [key: string]: any | undefined }, [key, value]: [string, any | undefined]) => {
         if (value !== undefined) {
           acc[key] = value;

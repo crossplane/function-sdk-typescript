@@ -930,7 +930,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest, "apiextensions.f
       input: isObject(object.input) ? object.input : undefined,
       context: isObject(object.context) ? object.context : undefined,
       extraResources: isObject(object.extraResources)
-        ? (globalThis.Object.entries(object.extraResources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.extraResources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Resources }, [key, value]: [string, any]) => {
             acc[key] = Resources.fromJSON(value);
             return acc;
@@ -938,7 +938,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest, "apiextensions.f
           {},
         )
         : isObject(object.extra_resources)
-        ? (globalThis.Object.entries(object.extra_resources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.extra_resources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Resources }, [key, value]: [string, any]) => {
             acc[key] = Resources.fromJSON(value);
             return acc;
@@ -947,7 +947,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest, "apiextensions.f
         )
         : {},
       credentials: isObject(object.credentials)
-        ? (globalThis.Object.entries(object.credentials) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.credentials) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Credentials }, [key, value]: [string, any]) => {
             acc[key] = Credentials.fromJSON(value);
             return acc;
@@ -956,7 +956,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest, "apiextensions.f
         )
         : {},
       requiredResources: isObject(object.requiredResources)
-        ? (globalThis.Object.entries(object.requiredResources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.requiredResources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Resources }, [key, value]: [string, any]) => {
             acc[key] = Resources.fromJSON(value);
             return acc;
@@ -964,7 +964,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest, "apiextensions.f
           {},
         )
         : isObject(object.required_resources)
-        ? (globalThis.Object.entries(object.required_resources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.required_resources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Resources }, [key, value]: [string, any]) => {
             acc[key] = Resources.fromJSON(value);
             return acc;
@@ -973,7 +973,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest, "apiextensions.f
         )
         : {},
       requiredSchemas: isObject(object.requiredSchemas)
-        ? (globalThis.Object.entries(object.requiredSchemas) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.requiredSchemas) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Schema }, [key, value]: [string, any]) => {
             acc[key] = Schema.fromJSON(value);
             return acc;
@@ -981,7 +981,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest, "apiextensions.f
           {},
         )
         : isObject(object.required_schemas)
-        ? (globalThis.Object.entries(object.required_schemas) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.required_schemas) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Schema }, [key, value]: [string, any]) => {
             acc[key] = Schema.fromJSON(value);
             return acc;
@@ -1010,7 +1010,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest, "apiextensions.f
       obj.context = message.context;
     }
     if (message.extraResources) {
-      const entries = globalThis.Object.entries(message.extraResources) as [string, Resources][];
+      const entries = globalThis.Object.entries(message.extraResources) as unknown as [string, Resources][];
       if (entries.length > 0) {
         obj.extraResources = {};
         entries.forEach(([k, v]) => {
@@ -1019,7 +1019,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest, "apiextensions.f
       }
     }
     if (message.credentials) {
-      const entries = globalThis.Object.entries(message.credentials) as [string, Credentials][];
+      const entries = globalThis.Object.entries(message.credentials) as unknown as [string, Credentials][];
       if (entries.length > 0) {
         obj.credentials = {};
         entries.forEach(([k, v]) => {
@@ -1028,7 +1028,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest, "apiextensions.f
       }
     }
     if (message.requiredResources) {
-      const entries = globalThis.Object.entries(message.requiredResources) as [string, Resources][];
+      const entries = globalThis.Object.entries(message.requiredResources) as unknown as [string, Resources][];
       if (entries.length > 0) {
         obj.requiredResources = {};
         entries.forEach(([k, v]) => {
@@ -1037,7 +1037,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest, "apiextensions.f
       }
     }
     if (message.requiredSchemas) {
-      const entries = globalThis.Object.entries(message.requiredSchemas) as [string, Schema][];
+      const entries = globalThis.Object.entries(message.requiredSchemas) as unknown as [string, Schema][];
       if (entries.length > 0) {
         obj.requiredSchemas = {};
         entries.forEach(([k, v]) => {
@@ -1064,40 +1064,40 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest, "apiextensions.f
       : undefined;
     message.input = object.input ?? undefined;
     message.context = object.context ?? undefined;
-    message.extraResources = (globalThis.Object.entries(object.extraResources ?? {}) as unknown as [string, Resources][]).reduce(
-      (acc: { [key: string]: Resources }, [key, value]: [string, Resources]) => {
-        if (value !== undefined) {
-          acc[key] = Resources.fromPartial(value);
-        }
-        return acc;
-      },
-      {},
-    );
-    message.credentials = (globalThis.Object.entries(object.credentials ?? {}) as unknown as [string, Credentials][]).reduce(
-      (acc: { [key: string]: Credentials }, [key, value]: [string, Credentials]) => {
+    message.extraResources =
+      (globalThis.Object.entries(object.extraResources ?? {}) as unknown as [string, Resources][]).reduce(
+        (acc: { [key: string]: Resources }, [key, value]: [string, Resources]) => {
+          if (value !== undefined) {
+            acc[key] = Resources.fromPartial(value);
+          }
+          return acc;
+        },
+        {},
+      );
+    message.credentials = (globalThis.Object.entries(object.credentials ?? {}) as unknown as [string, Credentials][])
+      .reduce((acc: { [key: string]: Credentials }, [key, value]: [string, Credentials]) => {
         if (value !== undefined) {
           acc[key] = Credentials.fromPartial(value);
         }
         return acc;
-      },
-      {},
-    );
-    message.requiredResources = (globalThis.Object.entries(object.requiredResources ?? {}) as unknown as [string, Resources][])
-      .reduce((acc: { [key: string]: Resources }, [key, value]: [string, Resources]) => {
-        if (value !== undefined) {
-          acc[key] = Resources.fromPartial(value);
-        }
-        return acc;
       }, {});
-    message.requiredSchemas = (globalThis.Object.entries(object.requiredSchemas ?? {}) as unknown as [string, Schema][]).reduce(
-      (acc: { [key: string]: Schema }, [key, value]: [string, Schema]) => {
+    message.requiredResources =
+      (globalThis.Object.entries(object.requiredResources ?? {}) as unknown as [string, Resources][]).reduce(
+        (acc: { [key: string]: Resources }, [key, value]: [string, Resources]) => {
+          if (value !== undefined) {
+            acc[key] = Resources.fromPartial(value);
+          }
+          return acc;
+        },
+        {},
+      );
+    message.requiredSchemas = (globalThis.Object.entries(object.requiredSchemas ?? {}) as unknown as [string, Schema][])
+      .reduce((acc: { [key: string]: Schema }, [key, value]: [string, Schema]) => {
         if (value !== undefined) {
           acc[key] = Schema.fromPartial(value);
         }
         return acc;
-      },
-      {},
-    );
+      }, {});
     return message;
   },
 };
@@ -1584,7 +1584,7 @@ export const CredentialData: MessageFns<CredentialData, "apiextensions.fn.proto.
     return {
       $type: CredentialData.$type,
       data: isObject(object.data)
-        ? (globalThis.Object.entries(object.data) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.data) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Buffer }, [key, value]: [string, any]) => {
             acc[key] = Buffer.from(bytesFromBase64(value as string));
             return acc;
@@ -1598,7 +1598,7 @@ export const CredentialData: MessageFns<CredentialData, "apiextensions.fn.proto.
   toJSON(message: CredentialData): unknown {
     const obj: any = {};
     if (message.data) {
-      const entries = globalThis.Object.entries(message.data) as [string, Buffer][];
+      const entries = globalThis.Object.entries(message.data) as unknown as [string, Buffer][];
       if (entries.length > 0) {
         obj.data = {};
         entries.forEach(([k, v]) => {
@@ -1614,7 +1614,7 @@ export const CredentialData: MessageFns<CredentialData, "apiextensions.fn.proto.
   },
   fromPartial<I extends Exact<DeepPartial<CredentialData>, I>>(object: I): CredentialData {
     const message = createBaseCredentialData();
-    message.data = (globalThis.Object.entries(object.data ?? {}) as [string, Buffer][]).reduce(
+    message.data = (globalThis.Object.entries(object.data ?? {}) as unknown as [string, Buffer][]).reduce(
       (acc: { [key: string]: Buffer }, [key, value]: [string, Buffer]) => {
         if (value !== undefined) {
           acc[key] = value;
@@ -2136,7 +2136,7 @@ export const Requirements: MessageFns<Requirements, "apiextensions.fn.proto.v1.R
     return {
       $type: Requirements.$type,
       extraResources: isObject(object.extraResources)
-        ? (globalThis.Object.entries(object.extraResources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.extraResources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: ResourceSelector }, [key, value]: [string, any]) => {
             acc[key] = ResourceSelector.fromJSON(value);
             return acc;
@@ -2144,7 +2144,7 @@ export const Requirements: MessageFns<Requirements, "apiextensions.fn.proto.v1.R
           {},
         )
         : isObject(object.extra_resources)
-        ? (globalThis.Object.entries(object.extra_resources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.extra_resources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: ResourceSelector }, [key, value]: [string, any]) => {
             acc[key] = ResourceSelector.fromJSON(value);
             return acc;
@@ -2153,7 +2153,7 @@ export const Requirements: MessageFns<Requirements, "apiextensions.fn.proto.v1.R
         )
         : {},
       resources: isObject(object.resources)
-        ? (globalThis.Object.entries(object.resources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.resources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: ResourceSelector }, [key, value]: [string, any]) => {
             acc[key] = ResourceSelector.fromJSON(value);
             return acc;
@@ -2162,7 +2162,7 @@ export const Requirements: MessageFns<Requirements, "apiextensions.fn.proto.v1.R
         )
         : {},
       schemas: isObject(object.schemas)
-        ? (globalThis.Object.entries(object.schemas) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.schemas) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: SchemaSelector }, [key, value]: [string, any]) => {
             acc[key] = SchemaSelector.fromJSON(value);
             return acc;
@@ -2176,7 +2176,7 @@ export const Requirements: MessageFns<Requirements, "apiextensions.fn.proto.v1.R
   toJSON(message: Requirements): unknown {
     const obj: any = {};
     if (message.extraResources) {
-      const entries = globalThis.Object.entries(message.extraResources) as [string, ResourceSelector][];
+      const entries = globalThis.Object.entries(message.extraResources) as unknown as [string, ResourceSelector][];
       if (entries.length > 0) {
         obj.extraResources = {};
         entries.forEach(([k, v]) => {
@@ -2185,7 +2185,7 @@ export const Requirements: MessageFns<Requirements, "apiextensions.fn.proto.v1.R
       }
     }
     if (message.resources) {
-      const entries = globalThis.Object.entries(message.resources) as [string, ResourceSelector][];
+      const entries = globalThis.Object.entries(message.resources) as unknown as [string, ResourceSelector][];
       if (entries.length > 0) {
         obj.resources = {};
         entries.forEach(([k, v]) => {
@@ -2194,7 +2194,7 @@ export const Requirements: MessageFns<Requirements, "apiextensions.fn.proto.v1.R
       }
     }
     if (message.schemas) {
-      const entries = globalThis.Object.entries(message.schemas) as [string, SchemaSelector][];
+      const entries = globalThis.Object.entries(message.schemas) as unknown as [string, SchemaSelector][];
       if (entries.length > 0) {
         obj.schemas = {};
         entries.forEach(([k, v]) => {
@@ -2210,22 +2210,23 @@ export const Requirements: MessageFns<Requirements, "apiextensions.fn.proto.v1.R
   },
   fromPartial<I extends Exact<DeepPartial<Requirements>, I>>(object: I): Requirements {
     const message = createBaseRequirements();
-    message.extraResources = (globalThis.Object.entries(object.extraResources ?? {}) as unknown as [string, ResourceSelector][])
+    message.extraResources =
+      (globalThis.Object.entries(object.extraResources ?? {}) as unknown as [string, ResourceSelector][]).reduce(
+        (acc: { [key: string]: ResourceSelector }, [key, value]: [string, ResourceSelector]) => {
+          if (value !== undefined) {
+            acc[key] = ResourceSelector.fromPartial(value);
+          }
+          return acc;
+        },
+        {},
+      );
+    message.resources = (globalThis.Object.entries(object.resources ?? {}) as unknown as [string, ResourceSelector][])
       .reduce((acc: { [key: string]: ResourceSelector }, [key, value]: [string, ResourceSelector]) => {
         if (value !== undefined) {
           acc[key] = ResourceSelector.fromPartial(value);
         }
         return acc;
       }, {});
-    message.resources = (globalThis.Object.entries(object.resources ?? {}) as unknown as [string, ResourceSelector][]).reduce(
-      (acc: { [key: string]: ResourceSelector }, [key, value]: [string, ResourceSelector]) => {
-        if (value !== undefined) {
-          acc[key] = ResourceSelector.fromPartial(value);
-        }
-        return acc;
-      },
-      {},
-    );
     message.schemas = (globalThis.Object.entries(object.schemas ?? {}) as unknown as [string, SchemaSelector][]).reduce(
       (acc: { [key: string]: SchemaSelector }, [key, value]: [string, SchemaSelector]) => {
         if (value !== undefined) {
@@ -2856,7 +2857,7 @@ export const MatchLabels: MessageFns<MatchLabels, "apiextensions.fn.proto.v1.Mat
     return {
       $type: MatchLabels.$type,
       labels: isObject(object.labels)
-        ? (globalThis.Object.entries(object.labels) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.labels) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: string }, [key, value]: [string, any]) => {
             acc[key] = globalThis.String(value);
             return acc;
@@ -2870,7 +2871,7 @@ export const MatchLabels: MessageFns<MatchLabels, "apiextensions.fn.proto.v1.Mat
   toJSON(message: MatchLabels): unknown {
     const obj: any = {};
     if (message.labels) {
-      const entries = globalThis.Object.entries(message.labels) as [string, string][];
+      const entries = globalThis.Object.entries(message.labels) as unknown as [string, string][];
       if (entries.length > 0) {
         obj.labels = {};
         entries.forEach(([k, v]) => {
@@ -2886,7 +2887,7 @@ export const MatchLabels: MessageFns<MatchLabels, "apiextensions.fn.proto.v1.Mat
   },
   fromPartial<I extends Exact<DeepPartial<MatchLabels>, I>>(object: I): MatchLabels {
     const message = createBaseMatchLabels();
-    message.labels = (globalThis.Object.entries(object.labels ?? {}) as [string, string][]).reduce(
+    message.labels = (globalThis.Object.entries(object.labels ?? {}) as unknown as [string, string][]).reduce(
       (acc: { [key: string]: string }, [key, value]: [string, string]) => {
         if (value !== undefined) {
           acc[key] = globalThis.String(value);
@@ -3126,7 +3127,7 @@ export const State: MessageFns<State, "apiextensions.fn.proto.v1.State"> = {
       $type: State.$type,
       composite: isSet(object.composite) ? Resource.fromJSON(object.composite) : undefined,
       resources: isObject(object.resources)
-        ? (globalThis.Object.entries(object.resources) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.resources) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Resource }, [key, value]: [string, any]) => {
             acc[key] = Resource.fromJSON(value);
             return acc;
@@ -3143,7 +3144,7 @@ export const State: MessageFns<State, "apiextensions.fn.proto.v1.State"> = {
       obj.composite = Resource.toJSON(message.composite);
     }
     if (message.resources) {
-      const entries = globalThis.Object.entries(message.resources) as [string, Resource][];
+      const entries = globalThis.Object.entries(message.resources) as unknown as [string, Resource][];
       if (entries.length > 0) {
         obj.resources = {};
         entries.forEach(([k, v]) => {
@@ -3333,7 +3334,7 @@ export const Resource: MessageFns<Resource, "apiextensions.fn.proto.v1.Resource"
       $type: Resource.$type,
       resource: isObject(object.resource) ? object.resource : undefined,
       connectionDetails: isObject(object.connectionDetails)
-        ? (globalThis.Object.entries(object.connectionDetails) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.connectionDetails) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Buffer }, [key, value]: [string, any]) => {
             acc[key] = Buffer.from(bytesFromBase64(value as string));
             return acc;
@@ -3341,7 +3342,7 @@ export const Resource: MessageFns<Resource, "apiextensions.fn.proto.v1.Resource"
           {},
         )
         : isObject(object.connection_details)
-        ? (globalThis.Object.entries(object.connection_details) as [string, any][]).reduce(
+        ? (globalThis.Object.entries(object.connection_details) as unknown as [string, any][]).reduce(
           (acc: { [key: string]: Buffer }, [key, value]: [string, any]) => {
             acc[key] = Buffer.from(bytesFromBase64(value as string));
             return acc;
@@ -3359,7 +3360,7 @@ export const Resource: MessageFns<Resource, "apiextensions.fn.proto.v1.Resource"
       obj.resource = message.resource;
     }
     if (message.connectionDetails) {
-      const entries = globalThis.Object.entries(message.connectionDetails) as [string, Buffer][];
+      const entries = globalThis.Object.entries(message.connectionDetails) as unknown as [string, Buffer][];
       if (entries.length > 0) {
         obj.connectionDetails = {};
         entries.forEach(([k, v]) => {
@@ -3379,13 +3380,16 @@ export const Resource: MessageFns<Resource, "apiextensions.fn.proto.v1.Resource"
   fromPartial<I extends Exact<DeepPartial<Resource>, I>>(object: I): Resource {
     const message = createBaseResource();
     message.resource = object.resource ?? undefined;
-    message.connectionDetails = (globalThis.Object.entries(object.connectionDetails ?? {}) as [string, Buffer][])
-      .reduce((acc: { [key: string]: Buffer }, [key, value]: [string, Buffer]) => {
-        if (value !== undefined) {
-          acc[key] = value;
-        }
-        return acc;
-      }, {});
+    message.connectionDetails =
+      (globalThis.Object.entries(object.connectionDetails ?? {}) as unknown as [string, Buffer][]).reduce(
+        (acc: { [key: string]: Buffer }, [key, value]: [string, Buffer]) => {
+          if (value !== undefined) {
+            acc[key] = value;
+          }
+          return acc;
+        },
+        {},
+      );
     message.ready = object.ready ?? 0;
     return message;
   },

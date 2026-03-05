@@ -48,7 +48,7 @@
     "kubernetes-models": "^4.5.1",
     "pino": "^10.1.0",
     "ts-deepmerge": "^7.0.3",
-    "ts-proto": "^2.10.1"
+    "ts-proto": "stevendborrelli/ts-proto#fix-type-annotations"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
