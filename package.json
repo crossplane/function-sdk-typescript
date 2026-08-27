@@ -44,7 +44,7 @@
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "google-protobuf": "^4.0.1",
-    "kubernetes-models": "^4.5.1",
+    "kubernetes-models": "^5.0.0",
     "pino": "^10.1.0",
     "ts-deepmerge": "^7.0.3",
     "ts-proto": "^2.10.1"
