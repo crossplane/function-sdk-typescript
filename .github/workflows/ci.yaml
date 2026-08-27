@@ -102,6 +102,12 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # npm run build compiles only src, which tsconfig.json excludes tests
+      # from. Type check the tests too, so that a change to an exported
+      # signature cannot silently break callers the tests cover.
+      - name: Typecheck
+        run: npm run typecheck
+
   test:
     runs-on: *default-runner
 

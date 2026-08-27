@@ -30,6 +30,7 @@
     "clean": "scripts/clean.sh",
     "protoc-gen": "scripts/protoc-gen.sh",
     "build": "npx tsc",
+    "typecheck": "npx tsc -p tsconfig.eslint.json --noEmit",
     "pack": "npm pack",
     "prepublishOnly": "npm run build",
     "test": "vitest run",

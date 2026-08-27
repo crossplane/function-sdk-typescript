@@ -215,14 +215,17 @@ export function toObject(resource: Resource): Record<string, unknown> | undefine
  * const resource = fromModel(pod);
  * ```
  */
-export function fromModel<T extends Record<string, unknown>>(
-  obj: { toJSON: () => T },
+export function fromModel(
+  obj: { toJSON: () => unknown },
   connectionDetails?: ConnectionDetails,
   ready?: Ready
 ): Resource {
-  // T already extends Record<string, unknown>, so the cast is unnecessary.
-  // Pass the result directly to fromObject which accepts T via its signature.
-  return fromObject(obj.toJSON(), connectionDetails, ready);
+  // We accept `toJSON(): unknown` rather than constraining it to
+  // Record<string, unknown>, because that is how @kubernetes-models/base
+  // declares it from v6 onward. Constraining the parameter made every model
+  // generated against base v6 fail to type check at the call site, including
+  // the crossplane-models package the Crossplane CLI generates.
+  return fromObject(obj.toJSON() as Record<string, unknown>, connectionDetails, ready);
 }
 
 /**
