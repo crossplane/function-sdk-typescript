@@ -90,6 +90,25 @@ See [USAGE.md](USAGE.md) for complete examples and API documentation.
 npm install
 ```
 
+### TypeScript toolchain
+
+Two compilers are installed side by side, which is why `package.json` looks unusual:
+
+| Dependency | Resolves to | Provides |
+| --- | --- | --- |
+| `@typescript/native` | `typescript@7` | `tsc` — used by `npm run build` and `npm run typecheck` |
+| `typescript` | `@typescript/typescript6@6` | `tsc6` — used by `npm run typecheck:legacy`, and imported by typescript-eslint |
+
+TypeScript 7 is the native compiler; it no longer exports the JavaScript compiler API that
+typescript-eslint's type-aware rules are built on. Until typescript-eslint is ported, it needs a
+TypeScript 6 package under the bare specifier `typescript`. `@typescript/typescript6` is a
+repackage of TypeScript 6 whose binary is named `tsc6`, so the two never collide over
+`node_modules/.bin/tsc`.
+
+This is temporary. When typescript-eslint supports TypeScript 7, drop the aliases, restore a
+plain `typescript` dependency, remove `typecheck:legacy`, and delete the matching `packageRules`
+entry in `renovate.json`.
+
 ### Testing
 
 The SDK uses [Vitest](https://vitest.dev/) for testing. Tests are located alongside source files with the `.test.ts` extension.
