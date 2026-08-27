@@ -327,7 +327,7 @@ export function update(
       ) {
         sourceData = merge.withOptions({ mergeArrays }, resourcePart, {
           metadata: srcObj.metadata,
-        }) as Record<string, unknown>;
+        });
       } else {
         sourceData = resourcePart;
       }
@@ -337,10 +337,7 @@ export function update(
   }
 
   // Perform deep merge with configured array handling
-  r.resource = merge.withOptions({ mergeArrays }, r.resource, sourceData) as Record<
-    string,
-    unknown
-  >;
+  r.resource = merge.withOptions({ mergeArrays }, r.resource, sourceData);
 }
 
 /**

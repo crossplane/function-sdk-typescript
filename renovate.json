@@ -29,6 +29,16 @@
         "helpers:pinGitHubActionDigests"
       ],
       "groupName": "GitHub Actions"
+    },
+    {
+      "description": "The `typescript` dependency is aliased to @typescript/typescript6 so that typescript-eslint still has a JavaScript compiler API to import; TypeScript 7 is installed alongside it as @typescript/native and provides `tsc`. Do not let the TS6 alias be bumped across the major. Remove this rule, and the alias, once typescript-eslint supports TypeScript 7.",
+      "matchPackageNames": [
+        "@typescript/typescript6"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
     }
   ],
   "vulnerabilityAlerts": {

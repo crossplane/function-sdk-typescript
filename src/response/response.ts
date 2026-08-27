@@ -358,7 +358,7 @@ export function setDesiredCompositeStatus({
   // Merge the status
   rsp.desired.composite.resource = merge(rsp.desired.composite.resource, {
     status: status,
-  }) as Record<string, unknown>;
+  });
 
   return rsp;
 }
