@@ -129,7 +129,8 @@ export function mustStructObject(obj: Record<string, unknown>): Record<string, u
     throw new Error(
       `Failed to convert object to struct: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
+      { cause: error }
     );
   }
 }
@@ -153,7 +154,8 @@ export function mustStructJSON(json: string): Record<string, unknown> {
     return asStruct(obj);
   } catch (error) {
     throw new Error(
-      `Failed to parse JSON to struct: ${error instanceof Error ? error.message : String(error)}`
+      `Failed to parse JSON to struct: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error }
     );
   }
 }
