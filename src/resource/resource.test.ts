@@ -46,6 +46,30 @@ describe('fromModel', () => {
     expect(resource.connectionDetails).toEqual({});
   });
 
+  it('should accept a model whose toJSON() is typed as unknown', () => {
+    // @kubernetes-models/base declares toJSON(): unknown from v6 onward, which
+    // is the shape of every model the Crossplane CLI generates into its
+    // crossplane-models package. Constraining the parameter to
+    // Record<string, unknown> made all of them fail to type check here.
+    const mockModel: { toJSON: () => unknown } = {
+      toJSON(): unknown {
+        return {
+          apiVersion: 'ec2.aws.m.upbound.io/v1beta1',
+          kind: 'VPC',
+          metadata: { name: 'my-vpc' },
+        };
+      },
+    };
+
+    const resource = fromModel(mockModel);
+
+    expect(resource.resource).toEqual({
+      apiVersion: 'ec2.aws.m.upbound.io/v1beta1',
+      kind: 'VPC',
+      metadata: { name: 'my-vpc' },
+    });
+  });
+
   it('should accept connection details and ready status', () => {
     const mockModel = {
       metadata: {
