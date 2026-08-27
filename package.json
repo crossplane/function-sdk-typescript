@@ -46,7 +46,7 @@
     "google-protobuf": "^4.0.1",
     "kubernetes-models": "^4.5.1",
     "pino": "^10.1.0",
-    "ts-deepmerge": "^7.0.3",
+    "ts-deepmerge": "^8.0.0",
     "ts-proto": "^2.10.1"
   },
   "devDependencies": {
