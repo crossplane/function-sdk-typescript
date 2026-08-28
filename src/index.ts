@@ -69,6 +69,19 @@ export {
   startServer,
 } from './runtime/runtime.js';
 
+// Entrypoint helpers
+export {
+  type ComposeFunction,
+  type ComposeResponse,
+  DEFAULT_ADDRESS,
+  DEFAULT_TLS_SERVER_CERTS_DIR,
+  fromCompose,
+  helpText,
+  parseArgs,
+  serve,
+  type ServeOptions,
+} from './serve/serve.js';
+
 // Protocol buffer types
 export {
   Capability,
