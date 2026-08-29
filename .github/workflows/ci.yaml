@@ -108,6 +108,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # Last, because a step that fails stops the job: a formatting nit should
+      # not hide a real lint or type error. Run `npm run format` to fix.
+      - name: Format
+        run: npm run format:check
+
   test:
     runs-on: *default-runner
 
