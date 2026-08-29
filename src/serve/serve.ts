@@ -189,9 +189,14 @@ export function helpText(name: string): string {
     const value = spec.type === 'string' ? ' <value>' : '';
     return `  ${short}--${flag}${value}`.padEnd(38) + descriptions[flag as keyof typeof flags];
   });
-  return [`Usage: ${name} [flags]`, '', 'A Crossplane composition function.', '', 'Flags:', ...usage].join(
-    '\n'
-  );
+  return [
+    `Usage: ${name} [flags]`,
+    '',
+    'A Crossplane composition function.',
+    '',
+    'Flags:',
+    ...usage,
+  ].join('\n');
 }
 
 /**
@@ -226,10 +231,7 @@ export function usageErrorText(name: string, error: unknown): string {
  * serve(compose);
  * ```
  */
-export function serve(
-  fn: ComposeFunction | FunctionHandler,
-  opts: ServeOptions = {}
-): grpc.Server {
+export function serve(fn: ComposeFunction | FunctionHandler, opts: ServeOptions = {}): grpc.Server {
   const name = opts.name ?? defaultName();
   const argv = opts.argv ?? process.argv.slice(2);
 

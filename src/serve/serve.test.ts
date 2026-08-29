@@ -104,7 +104,9 @@ describe('usageErrorText', () => {
 
     const text = usageErrorText('main.js', thrown);
 
-    expect(text).toBe("main.js: Unknown option '--nope'\nTry 'main.js --help' for the available flags.");
+    expect(text).toBe(
+      "main.js: Unknown option '--nope'\nTry 'main.js --help' for the available flags."
+    );
   });
 
   it('should not leak a stack trace', () => {

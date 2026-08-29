@@ -10,9 +10,47 @@ npm install @crossplane-org/function-sdk-typescript
 
 ## Basic Usage
 
-### 1. Implement the FunctionHandler Interface
+### 1. Write Your Function
 
-Create a TypeScript file that implements the `FunctionHandler` interface:
+A function is a plain function handed the request and a response to fill in:
+
+```typescript
+import {
+    Resource,
+    normal,
+    type ComposeFunction,
+} from "@crossplane-org/function-sdk-typescript";
+
+export const compose: ComposeFunction = (req, rsp, logger) => {
+    logger?.info("Processing function request");
+
+    rsp.desired.resources["my-config"] = Resource.fromJSON({
+        resource: {
+            apiVersion: "v1",
+            kind: "ConfigMap",
+            metadata: { name: "my-config" },
+            data: { key: "value" },
+        },
+    });
+
+    normal(rsp, "Function completed successfully");
+    return rsp;
+};
+```
+
+The response is already initialized from the request, so there is no need to call
+`to()`, and its `desired` state is guaranteed to be present — you can write
+`rsp.desired.resources[name]` without a non-null assertion. Return the response you
+want sent; returning it is required, so forgetting is a compile error rather than an
+empty response at runtime.
+
+Note that when the request already carries desired state — as it does for every
+function after the first in a pipeline — `rsp.desired` is the same object as
+`req.desired`, not a copy.
+
+#### Implementing FunctionHandler Instead
+
+If you would rather implement the full interface, `serve()` accepts that too:
 
 ```typescript
 import {
@@ -98,86 +136,45 @@ export class MyFunction implements FunctionHandler {
 
 ### 2. Create a Main Entry Point
 
-Create a `main.ts` file that sets up the gRPC server:
+Create a `main.ts` that hands your function to `serve()`:
 
 ```typescript
 #!/usr/bin/env node
 
-import { Command } from "commander";
-import { pino } from "pino";
-import {
-    FunctionRunner,
-    newGrpcServer,
-    startServer,
-    type ServerOptions,
-} from "@crossplane-org/function-sdk-typescript";
-import { MyFunction } from "./my-function.js";
+import { serve } from "@crossplane-org/function-sdk-typescript";
+import { compose } from "./my-function.js";
 
-const defaultAddress = "0.0.0.0:9443";
-const defaultTlsServerCertsDir = "/tls/server";
+serve(compose);
+```
 
-const program = new Command("my-function")
-    .option("--address", "Address to listen on", defaultAddress)
-    .option("-d, --debug", "Enable debug logging", false)
-    .option("--insecure", "Run without mTLS", false)
-    .option(
-        "--tls-server-certs-dir [Directory]",
-        "Directory containing TLS certificates",
-        defaultTlsServerCertsDir
-    );
+That is the whole entry point. `serve()` parses the standard function flags, builds a
+logger from `--debug`, starts the gRPC server, and shuts it down cleanly on `SIGINT`
+and `SIGTERM`. It accepts either a `ComposeFunction` or a `FunctionHandler`.
 
-program.parse(process.argv);
+Every function served this way accepts the same flags:
 
-function main() {
-    const args = program.opts();
-    const opts: ServerOptions = {
-        address: args?.address || defaultAddress,
-        debug: args.debug,
-        insecure: args.insecure,
-        tlsServerCertsDir: args.tlsServerCertsDir,
-    };
+```
+Usage: main.js [flags]
 
-    const logger = pino({
-        level: opts?.debug ? "debug" : "info",
-        formatters: {
-            level: (label) => {
-                return { severity: label.toUpperCase() };
-            },
-        },
-    });
+A Crossplane composition function.
 
-    logger.debug({ options: opts });
+Flags:
+      --address <value>               Address to listen for gRPC connections. Default 0.0.0.0:9443.
+  -d, --debug                         Emit debug logs.
+      --insecure                      Run without mTLS credentials.
+      --tls-server-certs-dir <value>  Directory holding tls.key, tls.crt and ca.crt. Default /tls/server.
+  -h, --help                          Show this help.
+```
 
-    try {
-        // Create your function handler
-        const myFunction = new MyFunction();
+`serve()` takes an options object for the cases where the defaults do not fit:
 
-        // Create the function runner with your handler
-        const fnRunner = new FunctionRunner(myFunction, logger);
-
-        // Create and start the gRPC server
-        const server = newGrpcServer(fnRunner, logger);
-        startServer(server, opts, logger);
-
-        // Graceful shutdown
-        process.on("SIGINT", () => {
-            logger.info("Shutting down gracefully...");
-            server.tryShutdown((err) => {
-                if (err) {
-                    logger.error(err, "Error during shutdown");
-                    process.exit(1);
-                }
-                logger.info("Server shut down successfully");
-                process.exit(0);
-            });
-        });
-    } catch (err) {
-        logger.error(err);
-        process.exit(-1);
-    }
-}
-
-main();
+```typescript
+serve(compose, {
+    name: "my-function",              // Program name shown in --help
+    argv: ["--insecure"],             // Defaults to process.argv.slice(2)
+    logger: myLogger,                 // Defaults to a pino logger built from --debug
+    serverOptions: { insecure: true } // Overrides applied on top of the parsed flags
+});
 ```
 
 ### 3. Build and Run
@@ -194,6 +191,43 @@ node dist/main.js --tls-server-certs-dir /path/to/certs
 ```
 
 ## Advanced Usage
+
+### Building the Server Yourself
+
+`serve()` is the recommended entry point, but the pieces it uses are exported, so a
+function that needs to own the process — extra flags, a different logger, its own
+signal handling — can assemble them directly:
+
+```typescript
+#!/usr/bin/env node
+
+import { pino } from "pino";
+import {
+    FunctionRunner,
+    newGrpcServer,
+    parseArgs,
+    startServer,
+    type ServerOptions,
+} from "@crossplane-org/function-sdk-typescript";
+import { MyFunction } from "./my-function.js";
+
+// parseArgs handles the standard flags, so your own parser only has to add to them.
+const { help, ...opts } = parseArgs(process.argv.slice(2));
+
+const logger = pino({
+    level: opts.debug ? "debug" : "info",
+    formatters: {
+        level: (label) => ({ severity: label.toUpperCase() }),
+    },
+});
+
+const server = newGrpcServer(new FunctionRunner(new MyFunction(), logger), logger);
+startServer(server, opts as ServerOptions, logger);
+
+process.on("SIGTERM", () => {
+    server.tryShutdown(() => process.exit(0));
+});
+```
 
 ### Using Kubernetes Models
 
@@ -298,6 +332,8 @@ normal(rsp, "Function completed successfully");
 
 ### Core Interfaces
 
+- `ComposeFunction` - A plain function given the request and a response to fill in
+- `ComposeResponse` - A `RunFunctionResponse` whose `desired` state is guaranteed present
 - `FunctionHandler` - Interface to implement for your function logic
 - `FunctionRunner` - Wraps your handler with error handling and logging
 - `getServer()` - Creates a gRPC server with your function
@@ -329,6 +365,12 @@ normal(rsp, "Function completed successfully");
 
 ### Runtime
 
+- `serve(fn, opts?)` - Run a `ComposeFunction` or `FunctionHandler` as a gRPC server: parses flags, builds a logger, starts the server, handles shutdown
+- `fromCompose(compose)` - Adapt a `ComposeFunction` to the `FunctionHandler` interface
+- `parseArgs(argv)` - Parse the standard function flags, for functions adding flags of their own
+- `helpText(name)` - The `--help` text for the standard flags
+- `DEFAULT_ADDRESS` - `0.0.0.0:9443`
+- `DEFAULT_TLS_SERVER_CERTS_DIR` - `/tls/server`
 - `newGrpcServer(runner, logger)` - Create gRPC server instance
 - `startServer(server, opts, logger)` - Bind and start the server on specified address
 - `getServerCredentials(opts)` - Create server credentials (TLS or insecure mode)
