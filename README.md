@@ -20,7 +20,46 @@ npm install @crossplane-org/function-sdk-typescript
 
 ### Creating Your Function
 
-Implement the `FunctionHandler` interface:
+A function is a plain function given the request and a response to fill in:
+
+```typescript
+import {
+    Resource,
+    normal,
+    type ComposeFunction,
+} from "@crossplane-org/function-sdk-typescript";
+
+export const compose: ComposeFunction = (req, rsp, logger) => {
+    logger?.info("Processing function request");
+
+    rsp.desired.resources["my-config"] = Resource.fromJSON({
+        resource: {
+            apiVersion: "v1",
+            kind: "ConfigMap",
+            metadata: { name: "my-config" },
+            data: { key: "value" },
+        },
+    });
+
+    normal(rsp, "Function completed successfully");
+    return rsp;
+};
+```
+
+Your entry point hands it to `serve()`, which parses the standard function flags,
+builds a logger, starts the gRPC server and handles shutdown:
+
+```typescript
+#!/usr/bin/env node
+
+import { serve } from "@crossplane-org/function-sdk-typescript";
+import { compose } from "./my-function.js";
+
+serve(compose);
+```
+
+If your function needs the full interface, implement `FunctionHandler` — `serve()`
+accepts either:
 
 ```typescript
 import type {
@@ -625,10 +664,22 @@ import {
 
     // Runtime types
     ServerOptions,
+    ComposeFunction,
+    ComposeResponse,
+    ServeOptions,
 } from "@crossplane-org/function-sdk-typescript";
 ```
 
 ### Core Functions
+
+#### Server Functions
+
+- **`serve(fn, opts?)`** - Run a `ComposeFunction` or `FunctionHandler` as a gRPC server
+- **`fromCompose(compose)`** - Adapt a `ComposeFunction` to the `FunctionHandler` interface
+- **`parseArgs(argv)`** - Parse the standard function flags
+- **`helpText(name)`** - The `--help` text for the standard flags
+- **`newGrpcServer(runner, logger)`** - Create a gRPC server instance
+- **`startServer(server, opts, logger)`** - Bind and start the server
 
 #### Response Functions
 
