@@ -33,8 +33,8 @@ import { pino, type Logger } from 'pino';
 import type { ServerOptions } from '../runtime/runtime.js';
 
 const DEFAULT_ADDRESS = '0.0.0.0:9443';
-const DEFAULT_TLS_SERVER_CERTS_DIR = '/tls/server';
 const DEFAULT_MAX_RECV_MESSAGE_SIZE = 4;
+const DEFAULT_TLS_SERVER_CERTS_DIR = '/tls/server';
 
 /** Specification for a single CLI flag. */
 export interface FlagSpec {
@@ -65,17 +65,17 @@ const standardFlags: Record<string, FlagSpec> = {
     env: 'INSECURE',
     description: 'Run without mTLS credentials.',
   },
-  'tls-server-certs-dir': {
-    type: 'string',
-    default: DEFAULT_TLS_SERVER_CERTS_DIR,
-    env: 'TLS_SERVER_CERTS_DIR',
-    description: `Directory holding tls.key, tls.crt and ca.crt. Default ${DEFAULT_TLS_SERVER_CERTS_DIR}.`,
-  },
   'max-recv-message-size': {
     type: 'string',
     default: String(DEFAULT_MAX_RECV_MESSAGE_SIZE),
     env: 'MAX_RECV_MESSAGE_SIZE',
     description: `Maximum size of received gRPC messages in MB. Default ${DEFAULT_MAX_RECV_MESSAGE_SIZE}.`,
+  },
+  'tls-server-certs-dir': {
+    type: 'string',
+    default: DEFAULT_TLS_SERVER_CERTS_DIR,
+    env: 'TLS_SERVER_CERTS_DIR',
+    description: `Directory holding tls.key, tls.crt and ca.crt. Default ${DEFAULT_TLS_SERVER_CERTS_DIR}.`,
   },
   help: {
     type: 'boolean',
