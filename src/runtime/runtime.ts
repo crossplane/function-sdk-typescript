@@ -41,6 +41,12 @@ export interface ServerOptions {
    * Ignored if insecure is set to true.
    */
   tlsServerCertsDir?: string;
+
+  /**
+   * Maximum size of received gRPC messages in bytes.
+   * Default: 4 MB (4 * 1024 * 1024).
+   */
+  maxRecvMessageSize?: number;
 }
 
 /**
@@ -112,8 +118,12 @@ export function getServerCredentials(opts?: ServerOptions): grpc.ServerCredentia
  * startServer(server, { address: ":9443", insecure: false }, logger);
  * ```
  */
-export function newGrpcServer(functionRunner: FunctionRunner, logger: Logger): grpc.Server {
-  const server = getServer(functionRunner, logger);
+export function newGrpcServer(
+  functionRunner: FunctionRunner,
+  logger: Logger,
+  opts?: Pick<ServerOptions, 'maxRecvMessageSize'>
+): grpc.Server {
+  const server = getServer(functionRunner, logger, opts);
   if (logger) {
     logger.debug('grpc server created');
   }

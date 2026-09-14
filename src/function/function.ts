@@ -147,8 +147,16 @@ export class FunctionRunner {
  * const server = getServer(runner, logger);
  * ```
  */
-export function getServer(functionRunner: FunctionRunner, logger: Logger): grpc.Server {
-  const server = new grpc.Server();
+export function getServer(
+  functionRunner: FunctionRunner,
+  logger: Logger,
+  opts?: { maxRecvMessageSize?: number }
+): grpc.Server {
+  const channelOptions: grpc.ServerOptions = {};
+  if (opts?.maxRecvMessageSize) {
+    channelOptions['grpc.max_receive_message_length'] = opts.maxRecvMessageSize;
+  }
+  const server = new grpc.Server(channelOptions);
 
   // Implement the service using the generated interface
   const implementation = {
