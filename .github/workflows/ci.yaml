@@ -18,7 +18,7 @@ env:
 jobs:
   # Compute the package version once and share it with all jobs that need it
   version:
-    runs-on: &default-runner ubuntu-24.04
+    runs-on: &default-runner ubuntu-26.04
     outputs:
       version: ${{ steps.version.outputs.version }}
       npm-tag: ${{ steps.version.outputs.npm-tag }}
