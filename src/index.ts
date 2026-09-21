@@ -61,6 +61,26 @@ export {
   update as updateResource,
 } from './resource/resource.js';
 
+// Composed resource ordering
+export {
+  addDependency,
+  dependsOn,
+  type DependsOnOptions,
+  dependsOnRequired,
+  getDependencies,
+  getResponseDependencies,
+  setDependencies,
+} from './dependency/dependency.js';
+export { resolveDependencies, trackObservedComposedResources } from './dependency/infer.js';
+export {
+  externalName,
+  named,
+  namedRequired,
+  ref,
+  type Ref,
+  resolveRefs,
+} from './dependency/typed.js';
+
 // Runtime utilities
 export {
   getServerCredentials,
@@ -88,6 +108,8 @@ export {
   Condition,
   CredentialData,
   Credentials,
+  Dependencies,
+  Dependency,
   FunctionRunnerServiceService,
   Ready,
   Requirements,
@@ -97,6 +119,7 @@ export {
   Result,
   RunFunctionRequest,
   RunFunctionResponse,
+  RequiredResourceDependency,
   Schema,
   SchemaSelector,
   Severity,

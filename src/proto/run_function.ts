@@ -61,6 +61,12 @@ export enum Capability {
    * in Crossplane v2.2.
    */
   CAPABILITY_REQUIRED_SCHEMAS = 5,
+  /**
+   * CAPABILITY_DEPENDENCIES - Crossplane supports the dependencies field. Functions can declare ordering
+   * constraints over composed resources, and Crossplane will sequence the
+   * resources it creates, updates and deletes accordingly.
+   */
+  CAPABILITY_DEPENDENCIES = 6,
   UNRECOGNIZED = -1,
 }
 
@@ -84,6 +90,9 @@ export function capabilityFromJSON(object: any): Capability {
     case 5:
     case "CAPABILITY_REQUIRED_SCHEMAS":
       return Capability.CAPABILITY_REQUIRED_SCHEMAS;
+    case 6:
+    case "CAPABILITY_DEPENDENCIES":
+      return Capability.CAPABILITY_DEPENDENCIES;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -105,6 +114,8 @@ export function capabilityToJSON(object: Capability): string {
       return "CAPABILITY_CONDITIONS";
     case Capability.CAPABILITY_REQUIRED_SCHEMAS:
       return "CAPABILITY_REQUIRED_SCHEMAS";
+    case Capability.CAPABILITY_DEPENDENCIES:
+      return "CAPABILITY_DEPENDENCIES";
     case Capability.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -389,6 +400,11 @@ export interface RunFunctionRequest {
    * to satisfy the request.
    */
   requiredSchemas: { [key: string]: Schema };
+  /**
+   * Optional ordering constraints over composed resources, accumulated by the
+   * functions that ran before this one.
+   */
+  dependencies: Dependencies | undefined;
 }
 
 export interface RunFunctionRequest_ExtraResourcesEntry {
@@ -430,6 +446,74 @@ export interface CredentialData_DataEntry {
 /** Resources represents the state of several Crossplane resources. */
 export interface Resources {
   items: Resource[];
+}
+
+/**
+ * Dependencies is a set of ordering constraints over composed resources.
+ *
+ * This is a message wrapping a repeated field, rather than a bare repeated
+ * field, so that an unset value can be told apart from an empty one. A bare
+ * repeated field can't express that difference: proto3 has no presence for
+ * repeated fields, and an empty list and an unset field are both zero bytes on
+ * the wire. Crossplane relies on the difference, because an unset value means
+ * "this function has no opinion, carry my constraints forward" while an empty
+ * one means "this function wants no constraints at all." State wraps desired
+ * and observed resources for the same reason.
+ */
+export interface Dependencies {
+  items: Dependency[];
+}
+
+/**
+ * A Dependency declares that one composed resource must be created after, and
+ * deleted before, another resource. It expresses ordering only. It doesn't move
+ * any data between resources.
+ */
+export interface Dependency {
+  /**
+   * Name of the composed resource that has the dependency. A key into the
+   * desired or observed State.resources map.
+   */
+  resource: string;
+  /**
+   * Name of another composed resource. A key into the desired or observed
+   * State.resources map.
+   */
+  composedResource?:
+    | string
+    | undefined;
+  /**
+   * A resource the pipeline required, rather than composed. Crossplane never
+   * deletes a resource it didn't compose, so these constrain only the order
+   * resources are created and updated.
+   */
+  requiredResource?:
+    | RequiredResourceDependency
+    | undefined;
+  /**
+   * If true, the resource may be created without waiting for the resource it
+   * depends on to be deleted. It must still exist and be ready before the
+   * resource it depends on is deleted. Only valid when depends_on is a
+   * composed resource.
+   */
+  createResourceBeforeDestroyingDependency: boolean;
+}
+
+/**
+ * A RequiredResourceDependency identifies a resource the pipeline required,
+ * for the purpose of ordering.
+ */
+export interface RequiredResourceDependency {
+  /**
+   * The requirement name. A key into a RunFunctionRequest's required_resources
+   * map, and into a RunFunctionResponse's requirements.resources map.
+   */
+  requirementName: string;
+  /**
+   * Optional name of a single resource within the set the requirement matched.
+   * If unset, every resource the requirement matched must be ready.
+   */
+  name?: string | undefined;
 }
 
 /** A RunFunctionResponse contains the result of a function run. */
@@ -479,7 +563,18 @@ export interface RunFunctionResponse {
    *
    * Only Operations use function output. XRs will discard any function output.
    */
-  output?: { [key: string]: any } | undefined;
+  output?:
+    | { [key: string]: any }
+    | undefined;
+  /**
+   * Optional ordering constraints over composed resources. A function that has
+   * an opinion about ordering must return the full set it wants going forward,
+   * including edges it received and still wants. Leaving this field unset means
+   * "no opinion" - Crossplane carries forward whatever it sent in the request.
+   *
+   * Dependencies are only used for composition. They're ignored by Operations.
+   */
+  dependencies: Dependencies | undefined;
 }
 
 /** RequestMeta contains metadata pertaining to a RunFunctionRequest. */
@@ -739,6 +834,7 @@ function createBaseRunFunctionRequest(): RunFunctionRequest {
     credentials: {},
     requiredResources: {},
     requiredSchemas: {},
+    dependencies: undefined,
   };
 }
 
@@ -771,6 +867,9 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
     globalThis.Object.entries(message.requiredSchemas).forEach(([key, value]: [string, Schema]) => {
       RunFunctionRequest_RequiredSchemasEntry.encode({ key: key as any, value }, writer.uint32(74).fork()).join();
     });
+    if (message.dependencies !== undefined) {
+      Dependencies.encode(message.dependencies, writer.uint32(82).fork()).join();
+    }
     return writer;
   },
 
@@ -869,6 +968,14 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
             if (entry9.value !== undefined) {
               message.requiredSchemas[entry9.key] = entry9.value;
             }
+            continue;
+          }
+          case 10: {
+            if (tag !== 82) {
+              break;
+            }
+
+            message.dependencies = Dependencies.decode(reader, reader.uint32());
             continue;
           }
         }
@@ -985,6 +1092,7 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
           {},
         )
         : {},
+      dependencies: isSet(object.dependencies) ? Dependencies.fromJSON(object.dependencies) : undefined,
     };
   },
 
@@ -1041,6 +1149,9 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
         });
       }
     }
+    if (message.dependencies !== undefined) {
+      obj.dependencies = Dependencies.toJSON(message.dependencies);
+    }
     return obj;
   },
 
@@ -1094,6 +1205,9 @@ export const RunFunctionRequest: MessageFns<RunFunctionRequest> = {
       },
       {},
     );
+    message.dependencies = (object.dependencies !== undefined && object.dependencies !== null)
+      ? Dependencies.fromPartial(object.dependencies)
+      : undefined;
     return message;
   },
 };
@@ -1788,6 +1902,300 @@ export const Resources: MessageFns<Resources> = {
   },
 };
 
+function createBaseDependencies(): Dependencies {
+  return { items: [] };
+}
+
+export const Dependencies: MessageFns<Dependencies> = {
+  encode(message: Dependencies, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.items) {
+      Dependency.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Dependencies {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDependencies();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.items.push(Dependency.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): Dependencies {
+    return {
+      items: globalThis.Array.isArray(object?.items) ? object.items.map((e: any) => Dependency.fromJSON(e)) : [],
+    };
+  },
+
+  toJSON(message: Dependencies): unknown {
+    const obj: any = {};
+    if (message.items?.length) {
+      obj.items = message.items.map((e) => Dependency.toJSON(e));
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Dependencies>, I>>(base?: I): Dependencies {
+    return Dependencies.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Dependencies>, I>>(object: I): Dependencies {
+    const message = createBaseDependencies();
+    message.items = object.items?.map((e) => Dependency.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseDependency(): Dependency {
+  return {
+    resource: "",
+    composedResource: undefined,
+    requiredResource: undefined,
+    createResourceBeforeDestroyingDependency: false,
+  };
+}
+
+export const Dependency: MessageFns<Dependency> = {
+  encode(message: Dependency, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.resource !== "") {
+      writer.uint32(10).string(message.resource);
+    }
+    if (message.composedResource !== undefined) {
+      writer.uint32(18).string(message.composedResource);
+    }
+    if (message.requiredResource !== undefined) {
+      RequiredResourceDependency.encode(message.requiredResource, writer.uint32(34).fork()).join();
+    }
+    if (message.createResourceBeforeDestroyingDependency !== false) {
+      writer.uint32(24).bool(message.createResourceBeforeDestroyingDependency);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Dependency {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDependency();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.resource = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.composedResource = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.requiredResource = RequiredResourceDependency.decode(reader, reader.uint32());
+            continue;
+          }
+          case 3: {
+            if (tag !== 24) {
+              break;
+            }
+
+            message.createResourceBeforeDestroyingDependency = reader.bool();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): Dependency {
+    return {
+      resource: isSet(object.resource) ? globalThis.String(object.resource) : "",
+      composedResource: isSet(object.composedResource)
+        ? globalThis.String(object.composedResource)
+        : isSet(object.composed_resource)
+        ? globalThis.String(object.composed_resource)
+        : undefined,
+      requiredResource: isSet(object.requiredResource)
+        ? RequiredResourceDependency.fromJSON(object.requiredResource)
+        : isSet(object.required_resource)
+        ? RequiredResourceDependency.fromJSON(object.required_resource)
+        : undefined,
+      createResourceBeforeDestroyingDependency: isSet(object.createResourceBeforeDestroyingDependency)
+        ? globalThis.Boolean(object.createResourceBeforeDestroyingDependency)
+        : isSet(object.create_resource_before_destroying_dependency)
+        ? globalThis.Boolean(object.create_resource_before_destroying_dependency)
+        : false,
+    };
+  },
+
+  toJSON(message: Dependency): unknown {
+    const obj: any = {};
+    if (message.resource !== "") {
+      obj.resource = message.resource;
+    }
+    if (message.composedResource !== undefined) {
+      obj.composedResource = message.composedResource;
+    }
+    if (message.requiredResource !== undefined) {
+      obj.requiredResource = RequiredResourceDependency.toJSON(message.requiredResource);
+    }
+    if (message.createResourceBeforeDestroyingDependency !== false) {
+      obj.createResourceBeforeDestroyingDependency = message.createResourceBeforeDestroyingDependency;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Dependency>, I>>(base?: I): Dependency {
+    return Dependency.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Dependency>, I>>(object: I): Dependency {
+    const message = createBaseDependency();
+    message.resource = object.resource ?? "";
+    message.composedResource = object.composedResource ?? undefined;
+    message.requiredResource = (object.requiredResource !== undefined && object.requiredResource !== null)
+      ? RequiredResourceDependency.fromPartial(object.requiredResource)
+      : undefined;
+    message.createResourceBeforeDestroyingDependency = object.createResourceBeforeDestroyingDependency ?? false;
+    return message;
+  },
+};
+
+function createBaseRequiredResourceDependency(): RequiredResourceDependency {
+  return { requirementName: "", name: undefined };
+}
+
+export const RequiredResourceDependency: MessageFns<RequiredResourceDependency> = {
+  encode(message: RequiredResourceDependency, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.requirementName !== "") {
+      writer.uint32(10).string(message.requirementName);
+    }
+    if (message.name !== undefined) {
+      writer.uint32(18).string(message.name);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RequiredResourceDependency {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseRequiredResourceDependency();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.requirementName = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.name = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): RequiredResourceDependency {
+    return {
+      requirementName: isSet(object.requirementName)
+        ? globalThis.String(object.requirementName)
+        : isSet(object.requirement_name)
+        ? globalThis.String(object.requirement_name)
+        : "",
+      name: isSet(object.name) ? globalThis.String(object.name) : undefined,
+    };
+  },
+
+  toJSON(message: RequiredResourceDependency): unknown {
+    const obj: any = {};
+    if (message.requirementName !== "") {
+      obj.requirementName = message.requirementName;
+    }
+    if (message.name !== undefined) {
+      obj.name = message.name;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<RequiredResourceDependency>, I>>(base?: I): RequiredResourceDependency {
+    return RequiredResourceDependency.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<RequiredResourceDependency>, I>>(object: I): RequiredResourceDependency {
+    const message = createBaseRequiredResourceDependency();
+    message.requirementName = object.requirementName ?? "";
+    message.name = object.name ?? undefined;
+    return message;
+  },
+};
+
 function createBaseRunFunctionResponse(): RunFunctionResponse {
   return {
     meta: undefined,
@@ -1797,6 +2205,7 @@ function createBaseRunFunctionResponse(): RunFunctionResponse {
     requirements: undefined,
     conditions: [],
     output: undefined,
+    dependencies: undefined,
   };
 }
 
@@ -1822,6 +2231,9 @@ export const RunFunctionResponse: MessageFns<RunFunctionResponse> = {
     }
     if (message.output !== undefined) {
       Struct.encode(Struct.wrap(message.output), writer.uint32(58).fork()).join();
+    }
+    if (message.dependencies !== undefined) {
+      Dependencies.encode(message.dependencies, writer.uint32(66).fork()).join();
     }
     return writer;
   },
@@ -1895,6 +2307,14 @@ export const RunFunctionResponse: MessageFns<RunFunctionResponse> = {
             message.output = Struct.unwrap(Struct.decode(reader, reader.uint32()));
             continue;
           }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.dependencies = Dependencies.decode(reader, reader.uint32());
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -1918,6 +2338,7 @@ export const RunFunctionResponse: MessageFns<RunFunctionResponse> = {
         ? object.conditions.map((e: any) => Condition.fromJSON(e))
         : [],
       output: isObject(object.output) ? object.output : undefined,
+      dependencies: isSet(object.dependencies) ? Dependencies.fromJSON(object.dependencies) : undefined,
     };
   },
 
@@ -1944,6 +2365,9 @@ export const RunFunctionResponse: MessageFns<RunFunctionResponse> = {
     if (message.output !== undefined) {
       obj.output = message.output;
     }
+    if (message.dependencies !== undefined) {
+      obj.dependencies = Dependencies.toJSON(message.dependencies);
+    }
     return obj;
   },
 
@@ -1965,6 +2389,9 @@ export const RunFunctionResponse: MessageFns<RunFunctionResponse> = {
       : undefined;
     message.conditions = object.conditions?.map((e) => Condition.fromPartial(e)) || [];
     message.output = object.output ?? undefined;
+    message.dependencies = (object.dependencies !== undefined && object.dependencies !== null)
+      ? Dependencies.fromPartial(object.dependencies)
+      : undefined;
     return message;
   },
 };

@@ -328,6 +328,199 @@ warning(rsp, "Non-critical issue detected");
 normal(rsp, "Function completed successfully");
 ```
 
+## Composed Resource Ordering
+
+Crossplane can sequence the composed resources it creates, updates and deletes
+if a function tells it what depends on what. Nothing is created until what it
+depends on is ready, and nothing is deleted until everything depending on it is
+gone.
+
+This is an alpha feature. Check for it before relying on it — an older
+Crossplane accepts the dependencies a function returns and ignores them:
+
+```typescript
+import { Capability, hasCapability } from "@crossplane-org/function-sdk-typescript";
+
+if (hasCapability(req, Capability.CAPABILITY_DEPENDENCIES)) {
+    // Ordering will be honoured.
+}
+```
+
+### Declaring dependencies
+
+```typescript
+import { dependsOn, dependsOnRequired } from "@crossplane-org/function-sdk-typescript";
+
+// subnet is not created until vpc is ready, and vpc is not deleted until
+// subnet is gone.
+dependsOn(rsp, "subnet", "vpc");
+
+// A replacement that must exist before its predecessor is torn down.
+dependsOn(rsp, "new-db", "old-db", { createBeforeDestroy: true });
+
+// Wait on a resource the function requires but does not compose. Crossplane
+// never deletes what it did not compose, so this only orders creation.
+dependsOnRequired(rsp, "instance", "shared-vpc");
+```
+
+Edges accumulate, and duplicates are dropped.
+
+### Referencing fields of other resources
+
+Rather than declaring the edge separately, write where the value comes from and
+let the SDK record the dependency:
+
+```typescript
+import {
+    externalName,
+    fromModel,
+    named,
+    ref,
+    resolveRefs,
+    setDesiredComposedResources,
+} from "@crossplane-org/function-sdk-typescript";
+import { Subnet, VPC } from "crossplane-models/ec2.aws.m.upbound.io/v1beta1";
+
+const vpc = named<VPC>("vpc");
+
+const subnet = new Subnet({
+    metadata: { name: "sn", namespace: "default" },
+    spec: {
+        forProvider: {
+            region: "us-east-1",
+            cidrBlock: "10.0.1.0/24",
+            vpcId: externalName(vpc), // instead of vpcIdSelector
+        },
+    },
+});
+
+subnet.validate();
+desired["subnet"] = fromModel(subnet);
+
+// Records subnet -> vpc, and fills in the value.
+rsp = setDesiredComposedResources(rsp, resolveRefs(req, rsp, desired));
+```
+
+`externalName(vpc)` is what a provider's `vpcIdRef` would have resolved to, so
+it is the direct replacement for a reference or selector field. For any other
+field, read it and wrap it in `ref`:
+
+```typescript
+arn: ref(vpc.status.atProvider.arn),
+```
+
+`vpc` reads like the resource itself, so your editor completes the fields and
+the compiler checks them. `ref` marks where the value comes from.
+
+This also works where no provider reference exists at all — a ConfigMap has no
+`addressRef`, and no selector can populate arbitrary data:
+
+```typescript
+const db = named<Instance>("db");
+
+desired["app-config"] = {
+    resource: {
+        apiVersion: "v1",
+        kind: "ConfigMap",
+        metadata: { name: "app-config", namespace: "default" },
+        data: { DB_HOST: ref(db.status.atProvider.address) },
+    },
+    ready: Ready.READY_UNSPECIFIED,
+};
+```
+
+For a resource this composite does not compose, name it as a requirement:
+
+```typescript
+import { namedRequired, ref } from "@crossplane-org/function-sdk-typescript";
+
+const external = namedRequired<Instance>("external-db");
+
+data: { DB_HOST: ref(external.status.atProvider.address) },
+```
+
+Name a specific one — `namedRequired("databases", "primary")` — when a
+requirement can match several. Without a name and with more than one match, the
+reference declines to resolve rather than guessing, and ordering holds the
+resource back.
+
+A reference to something that does not exist yet resolves to nothing and the
+field is left out. That is safe because the ordering edge stops Crossplane
+creating the resource until the value is there — so this pairs with
+`CAPABILITY_DEPENDENCIES` and should not be relied on without it.
+
+### Inferring dependencies from your code
+
+For functions that build plain objects rather than typed models, the SDK can
+also infer dependencies from ordinary property reads. This is a poor fit for
+typed code — a tracked read is always a truthy object, so an `if (value)` guard
+silently stops working — so prefer `ref` above unless your function is
+dynamic:
+
+```typescript
+import {
+    resolveDependencies,
+    setDesiredComposedResources,
+    trackObservedComposedResources,
+} from "@crossplane-org/function-sdk-typescript";
+
+const observed = trackObservedComposedResources(req);
+
+dcds["subnet"] = {
+    resource: {
+        apiVersion: "ec2.aws.upbound.io/v1beta1",
+        kind: "Subnet",
+        spec: {
+            forProvider: {
+                vpcId: observed["vpc"].resource.status.atProvider.id,
+            },
+        },
+    },
+    ready: Ready.READY_UNSPECIFIED,
+};
+
+// Records that subnet depends on vpc, and substitutes the real value.
+rsp = setDesiredComposedResources(rsp, resolveDependencies(rsp, dcds));
+```
+
+Reading a resource that does not exist yet is fine, and is the case that
+matters most: the value comes back `undefined` and the field is left out, but
+the dependency is recorded, so Crossplane waits instead of creating a subnet
+with no VPC.
+
+**What it can and cannot see.** A tracked read produces a placeholder that
+remembers where it came from, so the value has to survive as a value:
+
+| Written as | Edge recorded |
+| --- | --- |
+| `vpcId: vpc.status.atProvider.id` | yes |
+| `` name: `${vpc.status.atProvider.id}-sn` `` | no — interpolation drops it |
+| `if (vpc.status.atProvider.id)` | no — and placeholders are always truthy |
+
+The value is still correct in every case; only the edge is lost. Use
+`dependsOn` for those, and `valueOf()` when you need to test the real value.
+
+### Passing dependencies through
+
+`to(req)` carries inherited edges forward, the same way it carries desired
+state and context, so declaring an edge adds to what earlier functions declared
+rather than replacing it:
+
+```typescript
+dependsOn(rsp, "subnet", "vpc");   // added alongside anything inherited
+```
+
+To discard what came before, say so:
+
+```typescript
+setDependencies(rsp, []);          // no ordering constraints at all
+```
+
+That is different from a function never touching the field. When the request
+carries no edges, `to(req)` leaves `dependencies` unset, which Crossplane reads
+as "no opinion" and carries forward on the function's behalf — so a function
+that does not think about ordering needs to do nothing.
+
 ## API Reference
 
 ### Core Interfaces
@@ -344,6 +537,8 @@ normal(rsp, "Function completed successfully");
 - `getDesiredCompositeResource(req)` - Get the desired composite resource (returns `Resource | undefined`)
 - `getDesiredComposedResources(req)` - Get map of desired composed resources (returns empty object if none exist)
 - `getObservedComposedResources(req)` - Get map of observed composed resources (returns empty object if none exist)
+- `trackObservedComposedResources(req)` - As above, but reads through it record dependencies (see [Composed Resource Ordering](#composed-resource-ordering))
+- `getDependencies(req)` - Get ordering constraints declared by earlier functions
 - `getInput(req)` - Get function input configuration (returns `undefined` if not present)
 - `getContextKey(req, key)` - Get context value from previous function (returns `[value, exists]` tuple)
 - `getRequiredResources(req)` - Get required resources map

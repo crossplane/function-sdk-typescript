@@ -69,6 +69,13 @@ export function to(req: RunFunctionRequest, ttl?: Duration): RunFunctionResponse
   return {
     conditions: [],
     context: req.context,
+    // Carried forward like desired state and context, so that declaring an
+    // edge adds to what earlier functions declared instead of replacing it.
+    //
+    // Left unset when the request carries none, rather than set to an empty
+    // list: unset means "no opinion", while an empty list would mean "I want
+    // no ordering constraints at all".
+    dependencies: req.dependencies ? { items: [...req.dependencies.items] } : undefined,
     desired: desired,
     meta: { tag: req.meta?.tag || '', ttl: ttl || DEFAULT_TTL },
     requirements: undefined,
