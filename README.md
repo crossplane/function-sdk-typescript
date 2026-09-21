@@ -726,9 +726,7 @@ See [USAGE.md](USAGE.md) for detailed API documentation and examples.
 ### Runtime Dependencies
 
 - **`@grpc/grpc-js`** - gRPC implementation for Node.js
-- **`@grpc/proto-loader`** - Protocol buffer loader
-- **`google-protobuf`** - Google Protocol Buffers runtime
-- **`ts-proto`** - TypeScript protobuf code generator
+- **`@bufbuild/protobuf`** - Wire format reader/writer used by the generated protobuf code
 - **`ts-deepmerge`** - Deep merging utility for resources
 - **`pino`** - Fast, structured JSON logger
 - **`kubernetes-models`** - Type-safe Kubernetes resource models (optional)
@@ -737,7 +735,7 @@ See [USAGE.md](USAGE.md) for detailed API documentation and examples.
 
 - **`typescript`** - TypeScript compiler (v5.7+)
 - **`@types/node`** - Node.js type definitions
-- **`@types/google-protobuf`** - Google Protobuf type definitions
+- **`ts-proto`** - TypeScript protobuf code generator (a `protoc` plugin, build-time only)
 - **`ts-node`** - TypeScript execution engine
 - **`vitest`** - Fast unit test framework
 - **`@vitest/coverage-v8`** - Code coverage reporting

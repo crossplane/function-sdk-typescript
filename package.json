@@ -43,23 +43,21 @@
     "typecheck:legacy": "npx tsc6 --noEmit"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.15.0",
     "@grpc/grpc-js": "^1.14.3",
-    "@grpc/proto-loader": "^0.8.0",
-    "google-protobuf": "^4.0.1",
     "kubernetes-models": "^5.0.0",
     "pino": "^10.1.0",
-    "ts-deepmerge": "^8.0.0",
-    "ts-proto": "^2.10.1"
+    "ts-deepmerge": "^8.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
-    "@types/google-protobuf": "^3.15.12",
     "@types/node": "^25.0.3",
     "@typescript/native": "npm:typescript@^7.0.0",
     "@vitest/coverage-v8": "^5.0.0",
     "eslint": "^10.0.2",
     "prettier": "^3.7.4",
     "ts-node": "^10.9.2",
+    "ts-proto": "^2.12.4",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.60.0",
     "vitest": "^5.0.0"

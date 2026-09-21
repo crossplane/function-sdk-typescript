@@ -11,4 +11,3 @@ protoc \
     --proto_path=./src/proto \
     ./src/proto/run_function.proto
 
-#    --ts_out=optimize_code,optimize_code_size,long_type_string,grpc_js:./ \
