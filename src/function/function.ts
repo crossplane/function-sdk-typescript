@@ -150,11 +150,15 @@ export class FunctionRunner {
 export function getServer(
   functionRunner: FunctionRunner,
   logger: Logger,
-  opts?: { maxRecvMessageSize?: number }
+  opts?: { maxRecvMessageSize?: number; maxSendMessageSize?: number }
 ): grpc.Server {
   const channelOptions: grpc.ServerOptions = {};
   if (opts?.maxRecvMessageSize) {
     channelOptions['grpc.max_receive_message_length'] = opts.maxRecvMessageSize;
+  }
+  const sendSize = opts?.maxSendMessageSize ?? opts?.maxRecvMessageSize;
+  if (sendSize) {
+    channelOptions['grpc.max_send_message_length'] = sendSize;
   }
   const server = new grpc.Server(channelOptions);
 

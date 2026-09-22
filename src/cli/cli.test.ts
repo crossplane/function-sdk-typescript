@@ -3,7 +3,7 @@ import { CLI } from './cli.js';
 
 describe('CLI', () => {
   const savedEnv: Record<string, string | undefined> = {};
-  const envVars = ['ADDRESS', 'DEBUG', 'INSECURE', 'TLS_SERVER_CERTS_DIR', 'MAX_RECV_MESSAGE_SIZE', 'MY_FLAG'];
+  const envVars = ['ADDRESS', 'DEBUG', 'INSECURE', 'TLS_SERVER_CERTS_DIR', 'MAX_RECV_MESSAGE_SIZE', 'MAX_GRPC_MESSAGE_SIZE', 'MAX_SEND_MESSAGE_SIZE', 'MY_FLAG'];
 
   beforeEach(() => {
     for (const key of envVars) {
@@ -31,8 +31,9 @@ describe('CLI', () => {
         address: '0.0.0.0:9443',
         debug: false,
         insecure: false,
-        'tls-server-certs-dir': '/tls/server',
         'max-recv-message-size': '4',
+        'max-send-message-size': undefined,
+        'tls-server-certs-dir': '/tls/server',
         help: false,
       });
     });
@@ -156,6 +157,21 @@ describe('CLI', () => {
       expect(cli.parse([])['my-flag']).toBe('from-env');
     });
 
+    it('should read MAX_GRPC_MESSAGE_SIZE as alias for MAX_RECV_MESSAGE_SIZE', () => {
+      process.env.MAX_GRPC_MESSAGE_SIZE = '16';
+      const cli = new CLI({ name: 'test' });
+
+      expect(cli.parse([])['max-recv-message-size']).toBe('16');
+    });
+
+    it('should prefer MAX_RECV_MESSAGE_SIZE over MAX_GRPC_MESSAGE_SIZE', () => {
+      process.env.MAX_RECV_MESSAGE_SIZE = '8';
+      process.env.MAX_GRPC_MESSAGE_SIZE = '16';
+      const cli = new CLI({ name: 'test' });
+
+      expect(cli.parse([])['max-recv-message-size']).toBe('8');
+    });
+
     it('should prefer env over default but CLI over env', () => {
       process.env.MY_FLAG = 'from-env';
       const cli = new CLI({
@@ -195,6 +211,20 @@ describe('CLI', () => {
       expect(cli.standardOptions().maxRecvMessageSize).toBe(8 * 1024 * 1024);
     });
 
+    it('should default maxSendMessageSize to undefined when not set', () => {
+      const cli = new CLI({ name: 'test' });
+      cli.parse([]);
+
+      expect(cli.standardOptions().maxSendMessageSize).toBeUndefined();
+    });
+
+    it('should convert max-send-message-size from MB to bytes', () => {
+      const cli = new CLI({ name: 'test' });
+      cli.parse(['--max-send-message-size', '16']);
+
+      expect(cli.standardOptions().maxSendMessageSize).toBe(16 * 1024 * 1024);
+    });
+
     it('should reflect env vars in standard options', () => {
       process.env.ADDRESS = 'env:1111';
       process.env.DEBUG = 'true';
@@ -229,7 +259,7 @@ describe('CLI', () => {
       const help = cli.helpText();
 
       expect(help).toContain('Usage: my-fn');
-      for (const flag of ['--address', '--debug', '--insecure', '--tls-server-certs-dir', '--max-recv-message-size', '--help']) {
+      for (const flag of ['--address', '--debug', '--insecure', '--max-recv-message-size', '--max-send-message-size', '--tls-server-certs-dir', '--help']) {
         expect(help).toContain(flag);
       }
     });
@@ -257,7 +287,7 @@ describe('CLI', () => {
       const cli = new CLI({ name: 'test' });
       const help = cli.helpText();
 
-      for (const env of ['ADDRESS', 'DEBUG', 'INSECURE', 'TLS_SERVER_CERTS_DIR', 'MAX_RECV_MESSAGE_SIZE']) {
+      for (const env of ['ADDRESS', 'DEBUG', 'INSECURE', 'MAX_RECV_MESSAGE_SIZE', 'MAX_SEND_MESSAGE_SIZE', 'TLS_SERVER_CERTS_DIR']) {
         expect(help).toContain(`[env: ${env}]`);
       }
     });

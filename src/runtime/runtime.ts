@@ -47,6 +47,12 @@ export interface ServerOptions {
    * Default: 4 MB (4 * 1024 * 1024).
    */
   maxRecvMessageSize?: number;
+
+  /**
+   * Maximum size of sent gRPC messages in bytes.
+   * Defaults to maxRecvMessageSize when not set.
+   */
+  maxSendMessageSize?: number;
 }
 
 /**
@@ -121,7 +127,7 @@ export function getServerCredentials(opts?: ServerOptions): grpc.ServerCredentia
 export function newGrpcServer(
   functionRunner: FunctionRunner,
   logger: Logger,
-  opts?: Pick<ServerOptions, 'maxRecvMessageSize'>
+  opts?: Pick<ServerOptions, 'maxRecvMessageSize' | 'maxSendMessageSize'>
 ): grpc.Server {
   const server = getServer(functionRunner, logger, opts);
   if (logger) {
