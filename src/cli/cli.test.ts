@@ -3,7 +3,16 @@ import { CLI } from './cli.js';
 
 describe('CLI', () => {
   const savedEnv: Record<string, string | undefined> = {};
-  const envVars = ['ADDRESS', 'DEBUG', 'INSECURE', 'TLS_SERVER_CERTS_DIR', 'MAX_RECV_MESSAGE_SIZE', 'MAX_GRPC_MESSAGE_SIZE', 'MAX_SEND_MESSAGE_SIZE', 'MY_FLAG'];
+  const envVars = [
+    'ADDRESS',
+    'DEBUG',
+    'INSECURE',
+    'TLS_SERVER_CERTS_DIR',
+    'MAX_RECV_MESSAGE_SIZE',
+    'MAX_GRPC_MESSAGE_SIZE',
+    'MAX_SEND_MESSAGE_SIZE',
+    'MY_FLAG',
+  ];
 
   beforeEach(() => {
     for (const key of envVars) {
@@ -259,7 +268,15 @@ describe('CLI', () => {
       const help = cli.helpText();
 
       expect(help).toContain('Usage: my-fn');
-      for (const flag of ['--address', '--debug', '--insecure', '--max-recv-message-size', '--max-send-message-size', '--tls-server-certs-dir', '--help']) {
+      for (const flag of [
+        '--address',
+        '--debug',
+        '--insecure',
+        '--max-recv-message-size',
+        '--max-send-message-size',
+        '--tls-server-certs-dir',
+        '--help',
+      ]) {
         expect(help).toContain(flag);
       }
     });
@@ -287,7 +304,14 @@ describe('CLI', () => {
       const cli = new CLI({ name: 'test' });
       const help = cli.helpText();
 
-      for (const env of ['ADDRESS', 'DEBUG', 'INSECURE', 'MAX_RECV_MESSAGE_SIZE', 'MAX_SEND_MESSAGE_SIZE', 'TLS_SERVER_CERTS_DIR']) {
+      for (const env of [
+        'ADDRESS',
+        'DEBUG',
+        'INSECURE',
+        'MAX_RECV_MESSAGE_SIZE',
+        'MAX_SEND_MESSAGE_SIZE',
+        'TLS_SERVER_CERTS_DIR',
+      ]) {
         expect(help).toContain(`[env: ${env}]`);
       }
     });
