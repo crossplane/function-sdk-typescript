@@ -41,7 +41,10 @@ export interface FlagSpec {
   type: 'string' | 'boolean';
   default?: string | boolean;
   short?: string;
+  /** Primary environment variable. */
   env?: string;
+  /** Fallback environment variables checked when the primary is not set. */
+  envAliases?: string[];
   description: string;
 }
 
@@ -69,7 +72,13 @@ const standardFlags: Record<string, FlagSpec> = {
     type: 'string',
     default: String(DEFAULT_MAX_RECV_MESSAGE_SIZE),
     env: 'MAX_RECV_MESSAGE_SIZE',
+    envAliases: ['MAX_GRPC_MESSAGE_SIZE'],
     description: `Maximum size of received gRPC messages in MB. Default ${DEFAULT_MAX_RECV_MESSAGE_SIZE}.`,
+  },
+  'max-send-message-size': {
+    type: 'string',
+    env: 'MAX_SEND_MESSAGE_SIZE',
+    description: 'Maximum size of sent gRPC messages in MB. Defaults to --max-recv-message-size.',
   },
   'tls-server-certs-dir': {
     type: 'string',
@@ -161,13 +170,19 @@ export class CLI {
   /** Return {@link ServerOptions} derived from the standard flags. */
   standardOptions(): ServerOptions {
     const maxRecvMB = parseInt(String(this.values['max-recv-message-size']), 10);
+    const recvBytes = (isNaN(maxRecvMB) ? DEFAULT_MAX_RECV_MESSAGE_SIZE : maxRecvMB) * 1024 * 1024;
+
+    const sendRaw = this.values['max-send-message-size'];
+    const maxSendMB = sendRaw !== undefined ? parseInt(String(sendRaw), 10) : NaN;
+    const sendBytes = isNaN(maxSendMB) ? undefined : maxSendMB * 1024 * 1024;
+
     return {
       address: this.values['address'] as string,
       debug: this.values['debug'] as boolean,
       insecure: this.values['insecure'] as boolean,
       tlsServerCertsDir: this.values['tls-server-certs-dir'] as string,
-      maxRecvMessageSize:
-        (isNaN(maxRecvMB) ? DEFAULT_MAX_RECV_MESSAGE_SIZE : maxRecvMB) * 1024 * 1024,
+      maxRecvMessageSize: recvBytes,
+      maxSendMessageSize: sendBytes,
     };
   }
 
@@ -214,8 +229,9 @@ function resolveValue(
 
   if (givenOnCli) return cliValue;
 
-  if (spec.env) {
-    const envValue = process.env[spec.env];
+  const envKeys = [spec.env, ...(spec.envAliases ?? [])].filter(Boolean) as string[];
+  for (const key of envKeys) {
+    const envValue = process.env[key];
     if (envValue !== undefined) {
       return spec.type === 'boolean'
         ? envValue === '1' || envValue.toLowerCase() === 'true'

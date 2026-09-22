@@ -268,6 +268,7 @@ export function serve(fn: ComposeFunction | FunctionHandler, opts: ServeOptions 
   const handler: FunctionHandler = typeof fn === 'function' ? fromCompose(fn) : fn;
   const server = newGrpcServer(new FunctionRunner(handler, logger), logger, {
     maxRecvMessageSize: serverOptions.maxRecvMessageSize,
+    maxSendMessageSize: serverOptions.maxSendMessageSize,
   });
   startServer(server, serverOptions, logger);
 
