@@ -98,7 +98,7 @@ type NamedResource = {
  *   name: "my-bucket",
  *   resource: Resource.fromJSON({ resource: bucketConfig })
  * });
- * rsp = setDesiredComposedResources(rsp, dcds);
+ * setDesiredComposedResources(rsp, dcds);
  * ```
  */
 export function updateDesiredComposedResources(
@@ -119,7 +119,6 @@ export function updateDesiredComposedResources(
  *
  * @param rsp - The RunFunctionResponse to add the result to
  * @param message - The error message describing the fatal condition
- * @returns The updated response
  *
  * @example
  * ```typescript
@@ -129,14 +128,13 @@ export function updateDesiredComposedResources(
  * }
  * ```
  */
-export function fatal(rsp: RunFunctionResponse, message: string): RunFunctionResponse {
+export function fatal(rsp: RunFunctionResponse, message: string): void {
   if (rsp && rsp.results) {
     rsp.results.push({
       severity: Severity.SEVERITY_FATAL,
       message: message,
     });
   }
-  return rsp;
 }
 
 /**
@@ -154,7 +152,7 @@ export function fatal(rsp: RunFunctionResponse, message: string): RunFunctionRes
  * normal(rsp, "Successfully configured 3 database replicas");
  * ```
  */
-export function normal(rsp: RunFunctionResponse, message: string) {
+export function normal(rsp: RunFunctionResponse, message: string): void {
   if (rsp && rsp.results) {
     rsp.results.push({
       severity: Severity.SEVERITY_NORMAL,
@@ -180,7 +178,7 @@ export function normal(rsp: RunFunctionResponse, message: string) {
  * }
  * ```
  */
-export function warning(rsp: RunFunctionResponse, message: string) {
+export function warning(rsp: RunFunctionResponse, message: string): void {
   if (rsp && rsp.results) {
     rsp.results.push({
       severity: Severity.SEVERITY_WARNING,
@@ -201,7 +199,6 @@ export function warning(rsp: RunFunctionResponse, message: string) {
  *
  * @param rsp - The RunFunctionResponse to update
  * @param dcds - A map of resource names to Resource objects to set as desired
- * @returns The updated response
  *
  * @example
  * ```typescript
@@ -209,13 +206,13 @@ export function warning(rsp: RunFunctionResponse, message: string) {
  * dcds["my-deployment"] = Resource.fromJSON({
  *   resource: { apiVersion: "apps/v1", kind: "Deployment", ... }
  * });
- * rsp = setDesiredComposedResources(rsp, dcds);
+ * setDesiredComposedResources(rsp, dcds);
  * ```
  */
 export function setDesiredComposedResources(
   rsp: RunFunctionResponse,
   dcds: { [key: string]: Resource }
-): RunFunctionResponse {
+): void {
   // Ensure desired state exists
   if (!rsp.desired) {
     rsp.desired = { composite: undefined, resources: {} };
@@ -225,8 +222,6 @@ export function setDesiredComposedResources(
   rsp.desired.resources = merge(rsp.desired.resources || {}, dcds) as {
     [key: string]: Resource;
   };
-
-  return rsp;
 }
 
 /**
@@ -242,11 +237,10 @@ export function setDesiredComposedResources(
  *
  * @param rsp - The RunFunctionResponse to update
  * @param resources - A map of resource names to unstructured Kubernetes objects
- * @returns The updated response
  *
  * @example
  * ```typescript
- * rsp = setDesiredResources(rsp, {
+ * setDesiredResources(rsp, {
  *   "my-bucket": {
  *     apiVersion: "s3.aws.upbound.io/v1beta1",
  *     kind: "Bucket",
@@ -265,7 +259,7 @@ export function setDesiredComposedResources(
 export function setDesiredResources(
   rsp: RunFunctionResponse,
   resources: Record<string, Record<string, unknown>>
-): RunFunctionResponse {
+): void {
   // Ensure desired state exists
   if (!rsp.desired) {
     rsp.desired = { composite: undefined, resources: {} };
@@ -281,8 +275,6 @@ export function setDesiredResources(
   rsp.desired.resources = merge(rsp.desired.resources || {}, convertedResources) as {
     [key: string]: Resource;
   };
-
-  return rsp;
 }
 
 /**
@@ -320,11 +312,10 @@ export function update(src: Resource, tgt: Resource): Resource {
  * @param params - Object containing the response and status to set
  * @param params.rsp - The RunFunctionResponse to update
  * @param params.status - The status object to merge into the composite resource
- * @returns The updated response
  *
  * @example
  * ```typescript
- * rsp = setDesiredCompositeStatus({
+ * setDesiredCompositeStatus({
  *   rsp,
  *   status: {
  *     phase: "Ready",
@@ -339,7 +330,7 @@ export function setDesiredCompositeStatus({
 }: {
   rsp: RunFunctionResponse;
   status: Record<string, unknown>;
-}): RunFunctionResponse {
+}): void {
   // Ensure desired state exists
   if (!rsp.desired) {
     rsp.desired = { composite: undefined, resources: {} };
@@ -359,8 +350,6 @@ export function setDesiredCompositeStatus({
   rsp.desired.composite.resource = merge(rsp.desired.composite.resource, {
     status: status,
   });
-
-  return rsp;
 }
 
 /**
@@ -373,25 +362,19 @@ export function setDesiredCompositeStatus({
  * @param rsp - The RunFunctionResponse to update
  * @param key - The context key to set
  * @param value - The value to associate with the key (can be any JSON-serializable value)
- * @returns The updated response
  *
  * @example
  * ```typescript
  * // Set context for next function in pipeline
- * rsp = setContextKey(rsp, "database-endpoint", "db.example.com:5432");
- * rsp = setContextKey(rsp, "connection-config", { host: "db.example.com", port: 5432 });
+ * setContextKey(rsp, "database-endpoint", "db.example.com:5432");
+ * setContextKey(rsp, "connection-config", { host: "db.example.com", port: 5432 });
  * ```
  */
-export function setContextKey(
-  rsp: RunFunctionResponse,
-  key: string,
-  value: unknown
-): RunFunctionResponse {
+export function setContextKey(rsp: RunFunctionResponse, key: string, value: unknown): void {
   if (!rsp.context) {
     rsp.context = {};
   }
   rsp.context[key] = value;
-  return rsp;
 }
 
 /**
@@ -406,14 +389,13 @@ export function setContextKey(
  * @param rsp - The RunFunctionResponse to update
  * @param resource - The desired composite resource to set
  * @param ready - Optional ready status (READY_TRUE, READY_FALSE, or READY_UNSPECIFIED)
- * @returns The updated response
  *
  * @example
  * ```typescript
  * const composite = getObservedCompositeResource(req);
  * if (composite) {
  *   // Modify and set as desired with ready status
- *   rsp = setDesiredCompositeResource(rsp, composite, Ready.READY_TRUE);
+ *   setDesiredCompositeResource(rsp, composite, Ready.READY_TRUE);
  * }
  * ```
  */
@@ -421,7 +403,7 @@ export function setDesiredCompositeResource(
   rsp: RunFunctionResponse,
   resource: Resource,
   ready?: Ready
-): RunFunctionResponse {
+): void {
   if (!rsp.desired) {
     rsp.desired = { composite: undefined, resources: {} };
   }
@@ -433,8 +415,6 @@ export function setDesiredCompositeResource(
     connectionDetails: resource.connectionDetails,
     ready: ready !== undefined ? ready : Ready.READY_UNSPECIFIED,
   });
-
-  return rsp;
 }
 
 /**
@@ -446,24 +426,19 @@ export function setDesiredCompositeResource(
  *
  * @param rsp - The RunFunctionResponse to update
  * @param output - The output object to set (must be JSON-serializable)
- * @returns The updated response
  *
  * @example
  * ```typescript
  * // For operation functions
- * rsp = setOutput(rsp, {
+ * setOutput(rsp, {
  *   resourcesCreated: 5,
  *   status: "success",
  *   details: { timestamp: new Date().toISOString() }
  * });
  * ```
  */
-export function setOutput(
-  rsp: RunFunctionResponse,
-  output: Record<string, unknown>
-): RunFunctionResponse {
+export function setOutput(rsp: RunFunctionResponse, output: Record<string, unknown>): void {
   rsp.output = output;
-  return rsp;
 }
 
 /**
@@ -481,12 +456,11 @@ export function setOutput(
  * @param name - A unique name to identify this schema requirement
  * @param apiVersion - API version of the resource kind (e.g., "example.org/v1")
  * @param kind - Kind of resource (e.g., "MyResource")
- * @returns The updated response
  *
  * @example
  * ```typescript
  * // Request the OpenAPI schema for an XR type
- * rsp = requireSchema(rsp, "xr-schema", "example.org/v1", "MyResource");
+ * requireSchema(rsp, "xr-schema", "example.org/v1", "MyResource");
  *
  * // In the next function invocation, retrieve the schema:
  * const [schema, ok] = getRequiredSchema(req, "xr-schema");
@@ -500,7 +474,7 @@ export function requireSchema(
   name: string,
   apiVersion: string,
   kind: string
-): RunFunctionResponse {
+): void {
   if (!rsp.requirements) {
     rsp.requirements = {
       extraResources: {},
@@ -515,7 +489,6 @@ export function requireSchema(
     apiVersion,
     kind,
   };
-  return rsp;
 }
 
 /**
@@ -532,12 +505,11 @@ export function requireSchema(
  * @param rsp - The RunFunctionResponse to update
  * @param name - A unique name to identify this resource requirement
  * @param selector - The resource selector specifying which resources to fetch
- * @returns The updated response
  *
  * @example
  * ```typescript
  * // Match a specific ConfigMap by name
- * rsp = requireResource(rsp, "app-config", {
+ * requireResource(rsp, "app-config", {
  *   apiVersion: "v1",
  *   kind: "ConfigMap",
  *   matchName: "my-app-config",
@@ -545,7 +517,7 @@ export function requireSchema(
  * });
  *
  * // Match all Secrets with specific labels
- * rsp = requireResource(rsp, "db-secrets", {
+ * requireResource(rsp, "db-secrets", {
  *   apiVersion: "v1",
  *   kind: "Secret",
  *   matchLabels: {
@@ -568,7 +540,7 @@ export function requireResource(
   rsp: RunFunctionResponse,
   name: string,
   selector: ResourceSelector
-): RunFunctionResponse {
+): void {
   if (!rsp.requirements) {
     rsp.requirements = {
       extraResources: {},
@@ -580,5 +552,4 @@ export function requireResource(
     rsp.requirements.resources = {};
   }
   rsp.requirements.resources[name] = selector;
-  return rsp;
 }

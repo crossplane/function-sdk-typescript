@@ -1,12 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import {
+  fatal,
+  normal,
+  setContextKey,
+  setDesiredComposedResources,
+  setDesiredCompositeResource,
   setDesiredCompositeStatus,
   setDesiredResources,
+  setOutput,
   requireSchema,
   requireResource,
+  to,
+  warning,
 } from './response.js';
 import type { RunFunctionResponse } from '../proto/run_function.js';
-import { Ready } from '../proto/run_function.js';
+import { Ready, RunFunctionRequest } from '../proto/run_function.js';
 
 describe('setDesiredCompositeStatus', () => {
   it('should set status when desired.composite.resource exists', () => {
@@ -37,11 +45,11 @@ describe('setDesiredCompositeStatus', () => {
       conditions: [{ type: 'Synced', status: 'True' }],
     };
 
-    const result = setDesiredCompositeStatus({ rsp, status });
+    setDesiredCompositeStatus({ rsp, status });
 
-    expect(result.desired?.composite?.resource?.status).toEqual(status);
-    expect(result.desired?.composite?.resource?.apiVersion).toBe('example.org/v1');
-    expect(result.desired?.composite?.resource?.kind).toBe('XR');
+    expect(rsp.desired?.composite?.resource?.status).toEqual(status);
+    expect(rsp.desired?.composite?.resource?.apiVersion).toBe('example.org/v1');
+    expect(rsp.desired?.composite?.resource?.kind).toBe('XR');
   });
 
   it('should set status when desired.composite.resource is undefined', () => {
@@ -66,10 +74,10 @@ describe('setDesiredCompositeStatus', () => {
       message: 'Waiting for resources',
     };
 
-    const result = setDesiredCompositeStatus({ rsp, status });
+    setDesiredCompositeStatus({ rsp, status });
 
-    expect(result.desired?.composite?.resource?.status).toEqual(status);
-    expect(result.desired?.composite?.resource).toBeDefined();
+    expect(rsp.desired?.composite?.resource?.status).toEqual(status);
+    expect(rsp.desired?.composite?.resource).toBeDefined();
   });
 
   it('should set status when desired.composite is undefined', () => {
@@ -93,11 +101,11 @@ describe('setDesiredCompositeStatus', () => {
       ],
     };
 
-    const result = setDesiredCompositeStatus({ rsp, status });
+    setDesiredCompositeStatus({ rsp, status });
 
-    expect(result.desired?.composite?.resource?.status).toEqual(status);
-    expect(result.desired?.composite).toBeDefined();
-    expect(result.desired?.composite?.resource).toBeDefined();
+    expect(rsp.desired?.composite?.resource?.status).toEqual(status);
+    expect(rsp.desired?.composite).toBeDefined();
+    expect(rsp.desired?.composite?.resource).toBeDefined();
   });
 
   it('should set status when desired is undefined', () => {
@@ -115,12 +123,12 @@ describe('setDesiredCompositeStatus', () => {
       ready: false,
     };
 
-    const result = setDesiredCompositeStatus({ rsp, status });
+    setDesiredCompositeStatus({ rsp, status });
 
-    expect(result.desired).toBeDefined();
-    expect(result.desired?.composite).toBeDefined();
-    expect(result.desired?.composite?.resource).toBeDefined();
-    expect(result.desired?.composite?.resource?.status).toEqual(status);
+    expect(rsp.desired).toBeDefined();
+    expect(rsp.desired?.composite).toBeDefined();
+    expect(rsp.desired?.composite?.resource).toBeDefined();
+    expect(rsp.desired?.composite?.resource?.status).toEqual(status);
   });
 
   it('should merge status with existing status fields', () => {
@@ -155,12 +163,12 @@ describe('setDesiredCompositeStatus', () => {
       conditions: [{ type: 'NewCondition', status: 'True' }],
     };
 
-    const result = setDesiredCompositeStatus({ rsp, status });
+    setDesiredCompositeStatus({ rsp, status });
 
-    expect(result.desired?.composite?.resource?.status?.existingField).toBe('preserved');
-    expect(result.desired?.composite?.resource?.status?.phase).toBe('Ready');
+    expect(rsp.desired?.composite?.resource?.status?.existingField).toBe('preserved');
+    expect(rsp.desired?.composite?.resource?.status?.phase).toBe('Ready');
     // Note: merge will combine the arrays
-    expect(result.desired?.composite?.resource?.status?.conditions).toHaveLength(2);
+    expect(rsp.desired?.composite?.resource?.status?.conditions).toHaveLength(2);
   });
 
   it('should handle complex nested status objects', () => {
@@ -196,11 +204,11 @@ describe('setDesiredCompositeStatus', () => {
       },
     };
 
-    const result = setDesiredCompositeStatus({ rsp, status });
+    setDesiredCompositeStatus({ rsp, status });
 
-    expect(result.desired?.composite?.resource?.status).toEqual(status);
+    expect(rsp.desired?.composite?.resource?.status).toEqual(status);
     expect(
-      result.desired?.composite?.resource?.status?.atProvider?.connectionPool?.maxConnections
+      rsp.desired?.composite?.resource?.status?.atProvider?.connectionPool?.maxConnections
     ).toBe(100);
   });
 
@@ -241,23 +249,23 @@ describe('setDesiredCompositeStatus', () => {
       phase: 'Ready',
     };
 
-    const result = setDesiredCompositeStatus({ rsp, status });
+    setDesiredCompositeStatus({ rsp, status });
 
     // Verify status was set
-    expect(result.desired?.composite?.resource?.status).toEqual(status);
+    expect(rsp.desired?.composite?.resource?.status).toEqual(status);
 
     // Verify other fields preserved
-    expect(result.desired?.composite?.resource?.apiVersion).toBe('example.org/v1');
-    expect(result.desired?.composite?.resource?.kind).toBe('XR');
-    expect(result.desired?.composite?.resource?.metadata?.name).toBe('test-xr');
-    expect(result.desired?.composite?.resource?.metadata?.namespace).toBe('production');
-    expect(result.desired?.composite?.resource?.metadata?.labels?.app).toBe('myapp');
-    expect(result.desired?.composite?.resource?.spec?.region).toBe('us-west-2');
-    expect(result.desired?.composite?.resource?.spec?.replicas).toBe(3);
+    expect(rsp.desired?.composite?.resource?.apiVersion).toBe('example.org/v1');
+    expect(rsp.desired?.composite?.resource?.kind).toBe('XR');
+    expect(rsp.desired?.composite?.resource?.metadata?.name).toBe('test-xr');
+    expect(rsp.desired?.composite?.resource?.metadata?.namespace).toBe('production');
+    expect(rsp.desired?.composite?.resource?.metadata?.labels?.app).toBe('myapp');
+    expect(rsp.desired?.composite?.resource?.spec?.region).toBe('us-west-2');
+    expect(rsp.desired?.composite?.resource?.spec?.replicas).toBe(3);
 
     // Verify connection details and ready status preserved
-    expect(result.desired?.composite?.connectionDetails?.password).toEqual(Buffer.from('secret'));
-    expect(result.desired?.composite?.ready).toBe(Ready.READY_TRUE);
+    expect(rsp.desired?.composite?.connectionDetails?.password).toEqual(Buffer.from('secret'));
+    expect(rsp.desired?.composite?.ready).toBe(Ready.READY_TRUE);
   });
 });
 
@@ -290,13 +298,13 @@ describe('setDesiredResources', () => {
       },
     };
 
-    const result = setDesiredResources(rsp, resources);
+    setDesiredResources(rsp, resources);
 
-    expect(result.desired?.resources).toBeDefined();
-    expect(Object.keys(result.desired?.resources || {})).toHaveLength(2);
-    expect(result.desired?.resources?.['my-bucket']?.resource?.kind).toBe('Bucket');
-    expect(result.desired?.resources?.['my-db']?.resource?.kind).toBe('Instance');
-    expect(result.desired?.resources?.['my-bucket']?.resource?.spec?.forProvider?.region).toBe(
+    expect(rsp.desired?.resources).toBeDefined();
+    expect(Object.keys(rsp.desired?.resources || {})).toHaveLength(2);
+    expect(rsp.desired?.resources?.['my-bucket']?.resource?.kind).toBe('Bucket');
+    expect(rsp.desired?.resources?.['my-db']?.resource?.kind).toBe('Instance');
+    expect(rsp.desired?.resources?.['my-bucket']?.resource?.spec?.forProvider?.region).toBe(
       'us-west-2'
     );
   });
@@ -320,12 +328,12 @@ describe('setDesiredResources', () => {
       },
     };
 
-    const result = setDesiredResources(rsp, resources);
+    setDesiredResources(rsp, resources);
 
-    expect(result.desired).toBeDefined();
-    expect(result.desired?.resources).toBeDefined();
-    expect(result.desired?.resources?.['my-resource']?.resource?.kind).toBe('ConfigMap');
-    expect(result.desired?.resources?.['my-resource']?.resource?.data?.key).toBe('value');
+    expect(rsp.desired).toBeDefined();
+    expect(rsp.desired?.resources).toBeDefined();
+    expect(rsp.desired?.resources?.['my-resource']?.resource?.kind).toBe('ConfigMap');
+    expect(rsp.desired?.resources?.['my-resource']?.resource?.data?.key).toBe('value');
   });
 
   it('should merge with existing resources', () => {
@@ -359,11 +367,11 @@ describe('setDesiredResources', () => {
       },
     };
 
-    const result = setDesiredResources(rsp, resources);
+    setDesiredResources(rsp, resources);
 
-    expect(Object.keys(result.desired?.resources || {})).toHaveLength(2);
-    expect(result.desired?.resources?.['existing-resource']?.resource?.kind).toBe('Secret');
-    expect(result.desired?.resources?.['new-resource']?.resource?.kind).toBe('ConfigMap');
+    expect(Object.keys(rsp.desired?.resources || {})).toHaveLength(2);
+    expect(rsp.desired?.resources?.['existing-resource']?.resource?.kind).toBe('Secret');
+    expect(rsp.desired?.resources?.['new-resource']?.resource?.kind).toBe('ConfigMap');
   });
 
   it('should handle complex nested resource structures', () => {
@@ -415,12 +423,12 @@ describe('setDesiredResources', () => {
       },
     };
 
-    const result = setDesiredResources(rsp, resources);
+    setDesiredResources(rsp, resources);
 
-    expect(result.desired?.resources?.['complex-resource']?.resource?.kind).toBe('Deployment');
-    expect(result.desired?.resources?.['complex-resource']?.resource?.spec?.replicas).toBe(3);
+    expect(rsp.desired?.resources?.['complex-resource']?.resource?.kind).toBe('Deployment');
+    expect(rsp.desired?.resources?.['complex-resource']?.resource?.spec?.replicas).toBe(3);
     expect(
-      result.desired?.resources?.['complex-resource']?.resource?.spec?.template?.spec?.containers[0]
+      rsp.desired?.resources?.['complex-resource']?.resource?.spec?.template?.spec?.containers[0]
         ?.name
     ).toBe('app');
   });
@@ -438,10 +446,10 @@ describe('setDesiredResources', () => {
       results: [],
     };
 
-    const result = setDesiredResources(rsp, {});
+    setDesiredResources(rsp, {});
 
-    expect(result.desired?.resources).toBeDefined();
-    expect(Object.keys(result.desired?.resources || {})).toHaveLength(0);
+    expect(rsp.desired?.resources).toBeDefined();
+    expect(Object.keys(rsp.desired?.resources || {})).toHaveLength(0);
   });
 });
 
@@ -456,11 +464,11 @@ describe('requireSchema', () => {
       results: [],
     };
 
-    const result = requireSchema(rsp, 'xr-schema', 'example.org/v1', 'MyResource');
+    requireSchema(rsp, 'xr-schema', 'example.org/v1', 'MyResource');
 
-    expect(result.requirements).toBeDefined();
-    expect(result.requirements?.schemas).toBeDefined();
-    expect(result.requirements?.schemas?.['xr-schema']).toEqual({
+    expect(rsp.requirements).toBeDefined();
+    expect(rsp.requirements?.schemas).toBeDefined();
+    expect(rsp.requirements?.schemas?.['xr-schema']).toEqual({
       apiVersion: 'example.org/v1',
       kind: 'MyResource',
     });
@@ -486,10 +494,10 @@ describe('requireSchema', () => {
       results: [],
     };
 
-    const result = requireSchema(rsp, 'composite-schema', 'database.example.org/v1', 'Database');
+    requireSchema(rsp, 'composite-schema', 'database.example.org/v1', 'Database');
 
-    expect(result.requirements?.resources?.['existing-resource']).toBeDefined();
-    expect(result.requirements?.schemas?.['composite-schema']).toEqual({
+    expect(rsp.requirements?.resources?.['existing-resource']).toBeDefined();
+    expect(rsp.requirements?.schemas?.['composite-schema']).toEqual({
       apiVersion: 'database.example.org/v1',
       kind: 'Database',
     });
@@ -505,14 +513,14 @@ describe('requireSchema', () => {
       results: [],
     };
 
-    let result = requireSchema(rsp, 'xr-schema', 'example.org/v1', 'XR');
-    result = requireSchema(result, 'composed-schema', 'example.org/v1', 'ComposedResource');
-    result = requireSchema(result, 'claim-schema', 'example.org/v1', 'Claim');
+    requireSchema(rsp, 'xr-schema', 'example.org/v1', 'XR');
+    requireSchema(rsp, 'composed-schema', 'example.org/v1', 'ComposedResource');
+    requireSchema(rsp, 'claim-schema', 'example.org/v1', 'Claim');
 
-    expect(Object.keys(result.requirements?.schemas || {})).toHaveLength(3);
-    expect(result.requirements?.schemas?.['xr-schema']?.kind).toBe('XR');
-    expect(result.requirements?.schemas?.['composed-schema']?.kind).toBe('ComposedResource');
-    expect(result.requirements?.schemas?.['claim-schema']?.kind).toBe('Claim');
+    expect(Object.keys(rsp.requirements?.schemas || {})).toHaveLength(3);
+    expect(rsp.requirements?.schemas?.['xr-schema']?.kind).toBe('XR');
+    expect(rsp.requirements?.schemas?.['composed-schema']?.kind).toBe('ComposedResource');
+    expect(rsp.requirements?.schemas?.['claim-schema']?.kind).toBe('Claim');
   });
 
   it('should overwrite existing schema requirement with same name', () => {
@@ -534,9 +542,9 @@ describe('requireSchema', () => {
       results: [],
     };
 
-    const result = requireSchema(rsp, 'my-schema', 'new.example.org/v2', 'NewKind');
+    requireSchema(rsp, 'my-schema', 'new.example.org/v2', 'NewKind');
 
-    expect(result.requirements?.schemas?.['my-schema']).toEqual({
+    expect(rsp.requirements?.schemas?.['my-schema']).toEqual({
       apiVersion: 'new.example.org/v2',
       kind: 'NewKind',
     });
@@ -554,16 +562,16 @@ describe('requireResource', () => {
       results: [],
     };
 
-    const result = requireResource(rsp, 'app-config', {
+    requireResource(rsp, 'app-config', {
       apiVersion: 'v1',
       kind: 'ConfigMap',
       matchName: 'my-app-config',
       namespace: 'production',
     });
 
-    expect(result.requirements).toBeDefined();
-    expect(result.requirements?.resources).toBeDefined();
-    expect(result.requirements?.resources?.['app-config']).toEqual({
+    expect(rsp.requirements).toBeDefined();
+    expect(rsp.requirements?.resources).toBeDefined();
+    expect(rsp.requirements?.resources?.['app-config']).toEqual({
       apiVersion: 'v1',
       kind: 'ConfigMap',
       matchName: 'my-app-config',
@@ -581,7 +589,7 @@ describe('requireResource', () => {
       results: [],
     };
 
-    const result = requireResource(rsp, 'db-secrets', {
+    requireResource(rsp, 'db-secrets', {
       apiVersion: 'v1',
       kind: 'Secret',
       matchLabels: {
@@ -593,7 +601,7 @@ describe('requireResource', () => {
       namespace: 'production',
     });
 
-    expect(result.requirements?.resources?.['db-secrets']).toEqual({
+    expect(rsp.requirements?.resources?.['db-secrets']).toEqual({
       apiVersion: 'v1',
       kind: 'Secret',
       matchLabels: {
@@ -616,21 +624,21 @@ describe('requireResource', () => {
       results: [],
     };
 
-    let result = requireResource(rsp, 'config', {
+    requireResource(rsp, 'config', {
       apiVersion: 'v1',
       kind: 'ConfigMap',
       matchName: 'app-config',
     });
 
-    result = requireResource(result, 'secret', {
+    requireResource(rsp, 'secret', {
       apiVersion: 'v1',
       kind: 'Secret',
       matchName: 'app-secret',
     });
 
-    expect(Object.keys(result.requirements?.resources || {})).toHaveLength(2);
-    expect(result.requirements?.resources?.['config']?.kind).toBe('ConfigMap');
-    expect(result.requirements?.resources?.['secret']?.kind).toBe('Secret');
+    expect(Object.keys(rsp.requirements?.resources || {})).toHaveLength(2);
+    expect(rsp.requirements?.resources?.['config']?.kind).toBe('ConfigMap');
+    expect(rsp.requirements?.resources?.['secret']?.kind).toBe('Secret');
   });
 
   it('should add resource requirement when schemas already exist', () => {
@@ -652,7 +660,7 @@ describe('requireResource', () => {
       results: [],
     };
 
-    const result = requireResource(rsp, 'namespaces', {
+    requireResource(rsp, 'namespaces', {
       apiVersion: 'v1',
       kind: 'Namespace',
       matchLabels: {
@@ -662,8 +670,8 @@ describe('requireResource', () => {
       },
     });
 
-    expect(result.requirements?.schemas?.['existing-schema']).toBeDefined();
-    expect(result.requirements?.resources?.['namespaces']).toEqual({
+    expect(rsp.requirements?.schemas?.['existing-schema']).toBeDefined();
+    expect(rsp.requirements?.resources?.['namespaces']).toEqual({
       apiVersion: 'v1',
       kind: 'Namespace',
       matchLabels: {
@@ -684,7 +692,7 @@ describe('requireResource', () => {
       results: [],
     };
 
-    const result = requireResource(rsp, 'all-namespaces', {
+    requireResource(rsp, 'all-namespaces', {
       apiVersion: 'v1',
       kind: 'Namespace',
       matchLabels: {
@@ -694,7 +702,7 @@ describe('requireResource', () => {
       },
     });
 
-    expect(result.requirements?.resources?.['all-namespaces']?.namespace).toBeUndefined();
+    expect(rsp.requirements?.resources?.['all-namespaces']?.namespace).toBeUndefined();
   });
 
   it('should overwrite existing resource requirement with same name', () => {
@@ -717,16 +725,53 @@ describe('requireResource', () => {
       results: [],
     };
 
-    const result = requireResource(rsp, 'my-resource', {
+    requireResource(rsp, 'my-resource', {
       apiVersion: 'v1',
       kind: 'Secret',
       matchName: 'new-secret',
     });
 
-    expect(result.requirements?.resources?.['my-resource']).toEqual({
+    expect(rsp.requirements?.resources?.['my-resource']).toEqual({
       apiVersion: 'v1',
       kind: 'Secret',
       matchName: 'new-secret',
     });
+  });
+});
+
+describe('response helper return contract', () => {
+  // Every helper that takes a response mutates it in place and returns nothing,
+  // matching the Go and Python SDKs. Pinned here so a helper cannot quietly go
+  // back to returning the response and reintroduce the ambiguity of issue #33.
+  it('returns undefined from every response mutator', () => {
+    const rsp = to(RunFunctionRequest.fromJSON({}));
+
+    expect(fatal(rsp, 'm')).toBeUndefined();
+    expect(normal(rsp, 'm')).toBeUndefined();
+    expect(warning(rsp, 'm')).toBeUndefined();
+    expect(setDesiredComposedResources(rsp, {})).toBeUndefined();
+    expect(setDesiredResources(rsp, {})).toBeUndefined();
+    expect(
+      setDesiredCompositeResource(rsp, {
+        resource: {},
+        connectionDetails: {},
+        ready: Ready.READY_UNSPECIFIED,
+      })
+    ).toBeUndefined();
+    expect(setDesiredCompositeStatus({ rsp, status: {} })).toBeUndefined();
+    expect(setContextKey(rsp, 'k', 'v')).toBeUndefined();
+    expect(setOutput(rsp, {})).toBeUndefined();
+    expect(requireSchema(rsp, 'n', 'example.org/v1', 'Kind')).toBeUndefined();
+    expect(requireResource(rsp, 'n', { apiVersion: 'v1', kind: 'ConfigMap' })).toBeUndefined();
+  });
+
+  it('applies the mutations to the response it was given', () => {
+    const rsp = to(RunFunctionRequest.fromJSON({}));
+
+    normal(rsp, 'created');
+    setContextKey(rsp, 'endpoint', 'db.example.com:5432');
+
+    expect(rsp.results).toHaveLength(1);
+    expect(rsp.context?.['endpoint']).toBe('db.example.com:5432');
   });
 });

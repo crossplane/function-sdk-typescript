@@ -74,7 +74,7 @@ export class MyFunction implements FunctionHandler {
         logger?: Logger,
     ): Promise<RunFunctionResponse> {
         // Initialize response from request
-        let rsp = to(req);
+        const rsp = to(req);
 
         try {
             // Get observed and desired state
@@ -121,7 +121,7 @@ export class MyFunction implements FunctionHandler {
             });
 
             // Update response with desired composed resources
-            rsp = setDesiredComposedResources(rsp, dcds);
+            setDesiredComposedResources(rsp, dcds);
             normal(rsp, "Function completed successfully");
 
             return rsp;
@@ -263,7 +263,7 @@ You can update the status of the composite resource:
 ```typescript
 import { setDesiredCompositeStatus } from "@crossplane-org/function-sdk-typescript";
 
-rsp = setDesiredCompositeStatus({
+setDesiredCompositeStatus({
     rsp,
     status: {
         ready: true,
@@ -286,8 +286,8 @@ if (exists) {
 }
 
 // Set context for next function
-rsp = setContextKey(rsp, "resourceId", "my-resource-123");
-rsp = setContextKey(rsp, "status", { created: true, ready: false });
+setContextKey(rsp, "resourceId", "my-resource-123");
+setContextKey(rsp, "status", { created: true, ready: false });
 ```
 
 ### Working with Credentials
@@ -351,9 +351,11 @@ normal(rsp, "Function completed successfully");
 
 ### Response Helpers
 
+`to` builds a response. Every other helper below mutates the response it is given and returns nothing, matching the Go and Python SDKs -- call them as statements, not in an assignment.
+
 - `to(req, ttl?)` - Initialize response from request (optional TTL in seconds, defaults to 60)
 - `setDesiredComposedResources(rsp, resources)` - Set composed resources (merges with existing)
-- `updateDesiredComposedResources(rsp, resources)` - Alias for `setDesiredComposedResources`
+- `updateDesiredComposedResources(cds, namedResource)` - Add a named resource to a map of composed resources, returning the map. Operates on the map, not the response
 - `setDesiredCompositeResource(rsp, resource)` - Set the desired composite resource
 - `setDesiredCompositeStatus({ rsp, status })` - Update composite status
 - `setContextKey(rsp, key, value)` - Set context for next function in pipeline
