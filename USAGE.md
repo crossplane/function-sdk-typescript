@@ -153,18 +153,14 @@ and `SIGTERM`. It accepts either a `ComposeFunction` or a `FunctionHandler`.
 
 Every function served this way accepts the same flags:
 
-```
-Usage: main.js [flags]
-
-A Crossplane composition function.
-
-Flags:
-      --address <value>               Address to listen for gRPC connections. Default 0.0.0.0:9443.
-  -d, --debug                         Emit debug logs.
-      --insecure                      Run without mTLS credentials.
-      --tls-server-certs-dir <value>  Directory holding tls.key, tls.crt and ca.crt. Default /tls/server.
-  -h, --help                          Show this help.
-```
+| Flag | Env | Default | Description |
+|------|-----|---------|-------------|
+| `--address` | `ADDRESS` | `0.0.0.0:9443` | gRPC listen address |
+| `--debug` / `-d` | `DEBUG` | `false` | Emit debug logs |
+| `--insecure` | `INSECURE` | `false` | Run without mTLS |
+| `--tls-server-certs-dir` | `TLS_SERVER_CERTS_DIR` | `/tls/server` | mTLS certificate directory |
+| `--max-recv-message-size` | `MAX_RECV_MESSAGE_SIZE` | `4` | Max gRPC message size in MB |
+| `--help` / `-h` | — | `false` | Show help text |
 
 `serve()` takes an options object for the cases where the defaults do not fit:
 
@@ -191,6 +187,69 @@ node dist/main.js --tls-server-certs-dir /path/to/certs
 ```
 
 ## Advanced Usage
+
+### Custom Flags with the Shareable CLI
+
+If your function needs its own command-line flags or environment variables, use the
+`CLI` class. It provides the same standard flags that `serve()` uses, plus a way to
+register your own:
+
+```typescript
+#!/usr/bin/env node
+
+import { CLI, serve } from "@crossplane-org/function-sdk-typescript";
+import { compose } from "./my-function.js";
+
+const cli = new CLI({
+    flags: {
+        "cache-size": {
+            type: "string",
+            default: "100",
+            env: "CACHE_SIZE",
+            description: "Number of entries to cache.",
+        },
+        "verbose": {
+            type: "boolean",
+            default: false,
+            short: "v",
+            env: "VERBOSE",
+            description: "Enable verbose output.",
+        },
+    },
+});
+
+try {
+    const parsed = cli.parse();
+    if (parsed.help) {
+        process.stdout.write(cli.helpText() + "\n");
+        process.exit(0);
+    }
+
+    // Pass the CLI's standard options and logger to serve, skipping its
+    // internal argument parsing by supplying an empty argv.
+    serve(compose, {
+        argv: [],
+        serverOptions: cli.standardOptions(),
+        logger: cli.logger(),
+    });
+
+    const cacheSize = Number(parsed["cache-size"]);
+} catch (error) {
+    process.stderr.write(`${cli.name}: ${error instanceof Error ? error.message : error}\n`);
+    process.exit(2);
+}
+```
+
+Each custom flag supports:
+
+- **`type`** — `"string"` or `"boolean"`.
+- **`default`** — Value used when neither the CLI argument nor the env var is set.
+- **`short`** — Single-character alias (e.g. `-v`).
+- **`env`** — Environment variable name. Resolution order: CLI argument > env var > default.
+- **`description`** — Shown in `--help` output.
+
+Custom flag names must not collide with the standard flags; the constructor throws if
+they do.
 
 ### Building the Server Yourself
 
@@ -362,6 +421,15 @@ normal(rsp, "Function completed successfully");
 - `warning(rsp, message)` - Add warning result (continues pipeline)
 - `normal(rsp, message)` - Add normal info result
 - `update(source, target)` - Deep merge resources using ts-deepmerge
+
+### Shareable CLI
+
+- `new CLI(opts?)` - Create a CLI with optional custom flags
+- `cli.parse(argv?)` - Parse arguments (CLI arg > env var > default)
+- `cli.standardOptions()` - Get `ServerOptions` from the standard flags
+- `cli.logger()` - Get a pino Logger configured from `--debug`
+- `cli.helpText()` - Generate help text including custom flags
+- `cli.name` - The program name used in help text
 
 ### Runtime
 

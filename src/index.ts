@@ -61,6 +61,9 @@ export {
   update as updateResource,
 } from './resource/resource.js';
 
+// Shareable CLI
+export { CLI, type CLIOptions, type FlagSpec } from './cli/cli.js';
+
 // Runtime utilities
 export {
   getServerCredentials,
