@@ -80,7 +80,7 @@ import {
 
 export class MyFunction implements FunctionHandler {
     async RunFunction(req: RunFunctionRequest, logger?: Logger): Promise<RunFunctionResponse> {
-        let rsp = to(req);
+        const rsp = to(req);
 
         try {
             // Get observed composite resource and desired composed resources
@@ -99,7 +99,7 @@ export class MyFunction implements FunctionHandler {
                 }
             });
 
-            rsp = setDesiredComposedResources(rsp, dcds);
+            setDesiredComposedResources(rsp, dcds);
             normal(rsp, "Function completed successfully");
 
             return rsp;
@@ -201,7 +201,7 @@ export class FunctionRunner {
         logger?: Logger,
     ): Promise<RunFunctionResponse> {
         // Initialize response from request
-        let rsp = to(req);
+        const rsp = to(req);
 
         // Get desired composed resources from request
         let dcds = getDesiredComposedResources(req);
@@ -223,7 +223,7 @@ export class FunctionRunner {
         });
 
         // Set desired resources in response
-        rsp = setDesiredComposedResources(rsp, dcds);
+        setDesiredComposedResources(rsp, dcds);
 
         // Add a result message
         normal(rsp, "Resources created successfully");
@@ -355,22 +355,22 @@ import {
 } from "@crossplane-org/function-sdk-typescript";
 
 // Initialize response from request (with optional TTL)
-let rsp = to(req, DEFAULT_TTL);
+const rsp = to(req, DEFAULT_TTL);
 
 // Set desired composed resources (merges with existing)
-rsp = setDesiredComposedResources(rsp, dcds);
+setDesiredComposedResources(rsp, dcds);
 
 // Set desired composite resource
-rsp = setDesiredCompositeResource(rsp, dxr);
+setDesiredCompositeResource(rsp, dxr);
 
 // Update composite resource status
-rsp = setDesiredCompositeStatus({ rsp, status: { ready: true } });
+setDesiredCompositeStatus({ rsp, status: { ready: true } });
 
 // Set context for next function
-rsp = setContextKey(rsp, "my-key", "my-value");
+setContextKey(rsp, "my-key", "my-value");
 
 // Set output (returned to user)
-rsp = setOutput(rsp, { result: "success" });
+setOutput(rsp, { result: "success" });
 
 // Add result messages
 normal(rsp, "Success message");
@@ -378,7 +378,7 @@ warning(rsp, "Warning message");
 fatal(rsp, "Fatal error message");
 
 // Request Crossplane fetch a resource (available in next invocation)
-rsp = requireResource(rsp, "app-config", {
+requireResource(rsp, "app-config", {
     apiVersion: "v1",
     kind: "ConfigMap",
     matchName: "my-config",
@@ -386,7 +386,7 @@ rsp = requireResource(rsp, "app-config", {
 });
 
 // Request Crossplane fetch a schema (available in next invocation)
-rsp = requireSchema(rsp, "xr-schema", "example.org/v1", "MyResource");
+requireSchema(rsp, "xr-schema", "example.org/v1", "MyResource");
 ```
 
 #### Resource Helpers
@@ -682,6 +682,8 @@ import {
 - **`startServer(server, opts, logger)`** - Bind and start the server
 
 #### Response Functions
+
+`to` builds a response. Every other helper below mutates the response it is given and returns nothing, matching the Go and Python SDKs -- call them as statements, not in an assignment.
 
 - **`to(req, ttl?)`** - Initialize a response from a request
 - **`normal(rsp, message)`** - Add a normal (info) result
