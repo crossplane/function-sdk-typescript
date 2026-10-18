@@ -58,6 +58,36 @@ import { compose } from "./my-function.js";
 serve(compose);
 ```
 
+### Custom Flags with the Shareable CLI
+
+If your function needs its own command-line flags or environment variables, use the
+`CLI` class instead of calling `serve()` directly. It provides the same standard
+flags that `serve()` uses, plus a way to register your own:
+
+```typescript
+import { CLI, serve } from "@crossplane-org/function-sdk-typescript";
+import { compose } from "./my-function.js";
+
+const cli = new CLI({
+    flags: {
+        "cache-size": { type: "string", default: "100", env: "CACHE_SIZE", description: "Number of entries to cache." },
+    },
+});
+
+const parsed = cli.parse();
+if (parsed.help) {
+    process.stdout.write(cli.helpText() + "\n");
+    process.exit(0);
+}
+
+serve(compose, { argv: [], serverOptions: cli.standardOptions(), logger: cli.logger() });
+```
+
+See [USAGE.md](USAGE.md#custom-flags-with-the-shareable-cli) for the full list of
+standard flags, environment variables, flag spec options, and a more complete example.
+
+### Using the Full FunctionHandler Interface
+
 If your function needs the full interface, implement `FunctionHandler` — `serve()`
 accepts either:
 
@@ -667,10 +697,19 @@ import {
     ComposeFunction,
     ComposeResponse,
     ServeOptions,
+
+    // Shareable CLI
+    CLI,
+    CLIOptions,
+    FlagSpec,
 } from "@crossplane-org/function-sdk-typescript";
 ```
 
 ### Core Functions
+
+#### CLI
+
+- **`CLI`** - Shareable, extensible CLI with standard flags, env var support, and custom flag registration. See [USAGE.md](USAGE.md#shareable-cli) for the full method list.
 
 #### Server Functions
 
