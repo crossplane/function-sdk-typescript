@@ -1,4 +1,4 @@
-FROM node:25 AS build-env
+FROM node:26 AS build-env
 COPY . /function
 WORKDIR /function
 
