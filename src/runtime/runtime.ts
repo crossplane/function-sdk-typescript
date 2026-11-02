@@ -145,7 +145,9 @@ export function newGrpcServer(
  * based on the provided options. The binding happens asynchronously.
  *
  * The server will log when it successfully starts listening or if an error occurs
- * during binding.
+ * during binding. If binding fails the process exits non-zero: a function that
+ * cannot listen is not serving, and reporting success would leave a container
+ * running with nothing behind it.
  *
  * @param server - The gRPC Server instance to start
  * @param opts - Server options including address and TLS configuration
@@ -175,7 +177,7 @@ export function startServer(server: grpc.Server, opts: ServerOptions, logger: Lo
   server.bindAsync(opts.address, creds, (err) => {
     if (err) {
       logger.error(`server bind error: ${err.message}`);
-      return;
+      process.exit(1);
     }
     logger.info(`server started and listening on ${opts.address}`);
   });

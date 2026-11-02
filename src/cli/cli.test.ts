@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { CLI } from './cli.js';
+import { CLI, DEFAULT_ADDRESS, DEFAULT_TLS_SERVER_CERTS_DIR } from './cli.js';
 
 describe('CLI', () => {
   const savedEnv: Record<string, string | undefined> = {};
@@ -172,6 +172,70 @@ describe('CLI', () => {
       process.env.MAX_RECV_MESSAGE_SIZE = '16MB';
       const cli = new CLI({ name: 'test' });
       expect(() => cli.parse([])).toThrow(/got "16MB"/);
+    });
+
+    it('should accept a message size written with leading zeros', () => {
+      const cli = new CLI({ name: 'test' });
+      cli.parse(['--max-recv-message-size', '0007']);
+
+      expect(cli.standardOptions().maxRecvMessageSize).toBe(7 * 1024 * 1024);
+    });
+
+    it('should reject a message size larger than grpc-js accepts', () => {
+      // The channel arguments are int32, so anything past this would overflow
+      // into a different limit rather than being honoured.
+      const cli = new CLI({ name: 'test' });
+      expect(() => cli.parse(['--max-recv-message-size', '2048'])).toThrow(
+        /must be at most 2047 MB, got "2048"/
+      );
+      expect(() => cli.parse(['--max-recv-message-size', '99999999999999'])).toThrow(
+        /must be at most 2047 MB/
+      );
+
+      const atLimit = new CLI({ name: 'test' });
+      atLimit.parse(['--max-recv-message-size', '2047']);
+      expect(atLimit.standardOptions().maxRecvMessageSize).toBe(2047 * 1024 * 1024);
+    });
+
+    it('should treat an empty environment variable as unset', () => {
+      // A pod spec with value: "" says nothing about the value, and letting it
+      // through reaches the server as an empty address, or as an empty
+      // certificate directory that silently downgrades TLS to plaintext.
+      process.env.ADDRESS = '';
+      process.env.TLS_SERVER_CERTS_DIR = '';
+      process.env.INSECURE = '';
+
+      const cli = new CLI({ name: 'test' });
+      cli.parse([]);
+      const opts = cli.standardOptions();
+
+      expect(opts.address).toBe(DEFAULT_ADDRESS);
+      expect(opts.tlsServerCertsDir).toBe(DEFAULT_TLS_SERVER_CERTS_DIR);
+      expect(opts.insecure).toBe(false);
+    });
+
+    it('should fall through to the next source when an alias is empty', () => {
+      process.env.MAX_RECV_MESSAGE_SIZE = '';
+      process.env.MAX_GRPC_MESSAGE_SIZE = '16';
+
+      const cli = new CLI({ name: 'test' });
+      cli.parse([]);
+
+      expect(cli.standardOptions().maxRecvMessageSize).toBe(16 * 1024 * 1024);
+    });
+
+    it('should treat an empty message size as unset rather than rejecting it', () => {
+      process.env.MAX_RECV_MESSAGE_SIZE = '';
+
+      const cli = new CLI({ name: 'test' });
+      cli.parse([]);
+
+      expect(cli.standardOptions().maxRecvMessageSize).toBe(4 * 1024 * 1024);
+    });
+
+    it('should treat an empty argument as unset', () => {
+      const cli = new CLI({ name: 'test' });
+      expect(cli.parse(['--address', '']).address).toBe(DEFAULT_ADDRESS);
     });
   });
 

@@ -109,6 +109,12 @@ const standardFlags: Record<string, FlagSpec> = {
 /** Standard flags whose value is a whole number of megabytes. */
 const megabyteFlags = ['max-recv-message-size', 'max-send-message-size'];
 
+/**
+ * The largest value the gRPC message size channel arguments take: they are
+ * passed to grpc-js as int32.
+ */
+const MAX_MESSAGE_SIZE_BYTES = 2147483647;
+
 /** Options accepted by the {@link CLI} constructor. */
 export interface CLIOptions {
   /** Program name shown in help text. Defaults to the running script's basename. */
@@ -126,6 +132,7 @@ export interface CLIOptions {
  * variable support, and lets function authors register additional flags.
  *
  * Resolution order per flag: CLI argument > environment variable > default.
+ * An empty string from either source is treated as unset.
  */
 export class CLI {
   private readonly programName: string;
@@ -306,12 +313,17 @@ export function newLogger(debug: boolean): Logger {
 function resolveValue(spec: FlagSpec, cliValue: FlagValue): FlagValue {
   // node:util leaves a flag that was not given undefined, and a boolean flag
   // can only be given as true, so undefined means "not on the command line".
-  if (cliValue !== undefined) return cliValue;
+  //
+  // An empty string means the same thing. A pod spec with `value: ""` and an
+  // empty argument both say nothing about the value itself, and letting one
+  // through would reach the server as an empty listen address or, for
+  // tls-server-certs-dir, silently downgrade TLS to plaintext.
+  if (cliValue !== undefined && cliValue !== '') return cliValue;
 
   const envKeys = [spec.env, ...(spec.envAliases ?? [])].filter(Boolean) as string[];
   for (const key of envKeys) {
     const envValue = process.env[key];
-    if (envValue !== undefined) {
+    if (envValue !== undefined && envValue !== '') {
       return spec.type === 'boolean'
         ? envValue === '1' || envValue.toLowerCase() === 'true'
         : envValue;
@@ -324,17 +336,28 @@ function resolveValue(spec: FlagSpec, cliValue: FlagValue): FlagValue {
 /**
  * Convert a size in megabytes to bytes.
  *
- * @throws If the value is not a positive whole number.
+ * @throws If the value is not a positive whole number, or is larger than the
+ *   32-bit limit grpc-js imposes on the message size channel arguments.
  */
 function toBytes(name: string, spec: FlagSpec | undefined, value: string): number {
-  if (!/^[1-9][0-9]*$/.test(value)) {
-    const envKeys = [spec?.env, ...(spec?.envAliases ?? [])].filter(Boolean);
-    const source = [`--${name}`, ...envKeys].join(' or ');
+  const envKeys = [spec?.env, ...(spec?.envAliases ?? [])].filter(Boolean);
+  const source = [`--${name}`, ...envKeys].join(' or ');
+
+  // Leading zeros are allowed: 0007 and 7 mean the same thing.
+  if (!/^[0-9]+$/.test(value) || Number(value) === 0) {
     throw new Error(
       `${source} must be a positive whole number of megabytes, got ${JSON.stringify(value)}`
     );
   }
-  return Number(value) * 1024 * 1024;
+
+  const bytes = Number(value) * 1024 * 1024;
+  // grpc-js passes these to its channel as int32, so a larger number would
+  // silently overflow into a different limit rather than being honoured.
+  if (bytes > MAX_MESSAGE_SIZE_BYTES) {
+    const maxMegabytes = Math.floor(MAX_MESSAGE_SIZE_BYTES / 1024 / 1024);
+    throw new Error(`${source} must be at most ${maxMegabytes} MB, got ${JSON.stringify(value)}`);
+  }
+  return bytes;
 }
 
 function defaultName(): string {

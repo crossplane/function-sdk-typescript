@@ -165,8 +165,10 @@ command line wins over its environment variable, which wins over the default:
 | `--max-send-message-size` | `MAX_SEND_MESSAGE_SIZE` | the receive size | Max sent gRPC message size in MB |
 | `--help` / `-h` | — | `false` | Show help text |
 
-Boolean environment variables are on when set to `true` or `1`. Message sizes must be
-positive whole numbers of megabytes; anything else is rejected at startup.
+Boolean environment variables are on when set to `true` or `1`. An empty value — a
+variable set to `""`, or an empty argument — is treated as unset, so it falls through to
+the default rather than reaching the server. Message sizes must be whole numbers of
+megabytes between 1 and 2047; anything else is rejected at startup.
 
 #### Message size limits
 
@@ -182,6 +184,10 @@ carries the observed and desired state of all of them. Raise it with any of:
 platform teams that set one size across every function in a pipeline. Because the send
 limit defaults to the receive limit, it raises both. If both variables are set,
 `MAX_RECV_MESSAGE_SIZE` wins.
+
+A size must be a whole number of megabytes between 1 and 2047, the most gRPC's message
+size channel arguments can hold; `8`, `0008` and `2047` are accepted, `0`, `8.5`, `8MB`
+and `4096` are rejected at startup.
 
 Functions run in pods that Crossplane manages, so set the variable through a
 `DeploymentRuntimeConfig`:
@@ -215,7 +221,12 @@ Two behaviour changes affect functions that call `serve()` without changing any 
 - **The standard environment variables are read.** Earlier versions of `serve()` only
   read flags. A pod that already sets `ADDRESS`, `DEBUG`, `INSECURE`,
   `TLS_SERVER_CERTS_DIR` or one of the message size variables for some other reason
-  will now pick it up.
+  will now pick it up. An empty value is treated as unset, so `value: ""` in a pod
+  spec falls back to the default rather than replacing it.
+- **A function that cannot bind exits non-zero.** Earlier versions logged a bind error
+  and exited 0, leaving a container running with nothing listening behind it. The
+  process now exits 1 when the address cannot be bound, and 2 when the address itself
+  is unparsable, so a supervisor or readiness probe can see the failure.
 
 `serve()` takes an options object for the cases where the defaults do not fit:
 

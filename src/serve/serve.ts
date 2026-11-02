@@ -208,7 +208,15 @@ export function serve(fn: ComposeFunction | FunctionHandler, opts: ServeOptions 
     maxRecvMessageSize: serverOptions.maxRecvMessageSize,
     maxSendMessageSize: serverOptions.maxSendMessageSize,
   });
-  startServer(server, serverOptions, logger);
+  try {
+    startServer(server, serverOptions, logger);
+  } catch (error) {
+    // grpc-js throws synchronously for an address it cannot parse at all. Let
+    // it out and it reaches the top level as a stack trace through grpc-js's
+    // own internals; this is a bad value for a flag, so report it as one.
+    process.stderr.write(`${usageErrorText(cli.name, error)}\n`);
+    process.exit(2);
+  }
 
   const shutdown = (signal: string): void => {
     logger.info(`received ${signal}, shutting down`);

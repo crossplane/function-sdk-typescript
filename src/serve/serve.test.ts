@@ -64,6 +64,22 @@ describe('parseArgs', () => {
     expect(opts.maxSendMessageSize).toBe(32 * 1024 * 1024);
   });
 
+  it('should treat an empty environment variable as unset', () => {
+    // A container that sets value: "" for one of these variables would
+    // otherwise take the default away and hand the server an empty address.
+    for (const key of standardEnv) vi.stubEnv(key, '');
+
+    expect(parseArgs([])).toEqual({
+      address: DEFAULT_ADDRESS,
+      debug: false,
+      insecure: false,
+      tlsServerCertsDir: DEFAULT_TLS_SERVER_CERTS_DIR,
+      maxRecvMessageSize: 4 * 1024 * 1024,
+      maxSendMessageSize: undefined,
+      help: false,
+    });
+  });
+
   it('should parse flags given as separate arguments', () => {
     const opts = parseArgs([
       '--address',
@@ -157,7 +173,11 @@ describe('serve', () => {
   });
 
   /** Run serve with argv, returning its exit code and what it wrote to stdout. */
-  function run(opts: Parameters<typeof serve>[1]): { code: unknown; stdout: string } {
+  function run(opts: Parameters<typeof serve>[1]): {
+    code: unknown;
+    stdout: string;
+    stderr: string;
+  } {
     vi.spyOn(process, 'exit').mockImplementation((code) => {
       throw new Exit(code);
     });
@@ -166,11 +186,16 @@ describe('serve', () => {
       stdout += String(chunk);
       return true;
     });
+    let stderr = '';
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      stderr += String(chunk);
+      return true;
+    });
 
     try {
       serve((_req, rsp) => rsp, opts);
     } catch (error) {
-      if (error instanceof Exit) return { code: error.code, stdout };
+      if (error instanceof Exit) return { code: error.code, stdout, stderr };
       throw error;
     }
     throw new Error('serve did not exit');
@@ -214,6 +239,21 @@ describe('serve', () => {
 
     expect(code).toBe(0);
     expect(stdout).toBe(`${helpText('my-fn')}\n`);
+  });
+
+  it('should report an address grpc-js cannot parse as a usage error', () => {
+    // grpc-js throws this synchronously from bindAsync, so without catching
+    // it the process dies with a stack trace through grpc-js's internals.
+    const { code, stderr } = run({
+      name: 'my-fn',
+      argv: [],
+      // insecure, so we reach bindAsync instead of reading TLS certs.
+      serverOptions: { address: '', insecure: true },
+    });
+
+    expect(code).toBe(2);
+    expect(stderr).toContain('my-fn: Could not parse port ""');
+    expect(stderr).toContain("Try 'my-fn --help' for the available flags.");
   });
 });
 
