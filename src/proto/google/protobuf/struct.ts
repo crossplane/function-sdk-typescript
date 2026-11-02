@@ -6,6 +6,8 @@ import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 
 export const protobufPackage = "google.protobuf";
 
+export const protobufFileName = "google/protobuf/struct.proto";
+
 /**
  * Represents a JSON `null`.
  *
@@ -316,7 +318,7 @@ export const Struct_FieldsEntry: MessageFns<Struct_FieldsEntry> = {
   fromPartial<I extends Exact<DeepPartial<Struct_FieldsEntry>, I>>(object: I): Struct_FieldsEntry {
     const message = createBaseStruct_FieldsEntry();
     message.key = object.key ?? "";
-    message.value = object.value ?? undefined;
+    message.value = object.value === undefined ? undefined : object.value;
     return message;
   },
 };
@@ -469,7 +471,7 @@ export const Value: MessageFns<Value> & AnyValueWrapperFns = {
       obj.nullValue = nullValueToJSON(message.nullValue);
     }
     if (message.numberValue !== undefined) {
-      obj.numberValue = message.numberValue;
+      obj.numberValue = floatToJson(message.numberValue);
     }
     if (message.stringValue !== undefined) {
       obj.stringValue = message.stringValue;
@@ -628,6 +630,10 @@ export interface DataLoaders {
   getDataLoader<T>(identifier: string, constructorFn: () => T): T;
 }
 
+function floatToJson(value: number | null | undefined): number | string | null | undefined {
+  return typeof value === "number" && !globalThis.Number.isFinite(value) ? globalThis.String(value) : value;
+}
+
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 
 export type DeepPartial<T> = T extends Builtin ? T
@@ -637,8 +643,11 @@ export type DeepPartial<T> = T extends Builtin ? T
   : Partial<T>;
 
 type KeysOfUnion<T> = T extends T ? keyof T : never;
-export type Exact<P, I extends P> = P extends Builtin ? P
-  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
+export type Exact<P, I> = P extends Builtin ? P
+  :
+    & P
+    & { [K in keyof P as Extract<K, keyof I>]: Exact<P[K], I[K & keyof I]> }
+    & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
 
 function isObject(value: any): boolean {
   return typeof value === "object" && value !== null;

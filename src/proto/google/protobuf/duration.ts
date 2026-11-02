@@ -6,6 +6,8 @@ import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 
 export const protobufPackage = "google.protobuf";
 
+export const protobufFileName = "google/protobuf/duration.proto";
+
 /**
  * A Duration represents a signed, fixed-length span of time represented
  * as a count of seconds and fractions of seconds at nanosecond
@@ -187,8 +189,11 @@ export type DeepPartial<T> = T extends Builtin ? T
   : Partial<T>;
 
 type KeysOfUnion<T> = T extends T ? keyof T : never;
-export type Exact<P, I extends P> = P extends Builtin ? P
-  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
+export type Exact<P, I> = P extends Builtin ? P
+  :
+    & P
+    & { [K in keyof P as Extract<K, keyof I>]: Exact<P[K], I[K & keyof I]> }
+    & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
 
 function longToNumber(int64: { toString(): string }): number {
   const num = globalThis.Number(int64.toString());

@@ -20,6 +20,8 @@ import { Struct } from "./google/protobuf/struct.js";
 
 export const protobufPackage = "apiextensions.fn.proto.v1";
 
+export const protobufFileName = "run_function.proto";
+
 /**
  * Capability indicates that Crossplane supports a particular feature.
  * Functions can check for capabilities to determine whether Crossplane will
@@ -1975,11 +1977,13 @@ export const RequestMeta: MessageFns<RequestMeta> = {
     if (message.tag !== "") {
       writer.uint32(10).string(message.tag);
     }
-    writer.uint32(18).fork();
-    for (const v of message.capabilities) {
-      writer.int32(v);
+    if (message.capabilities.length !== 0) {
+      writer.uint32(18).fork();
+      for (const v of message.capabilities) {
+        writer.int32(v);
+      }
+      writer.join();
     }
-    writer.join();
     return writer;
   },
 
@@ -3867,8 +3871,11 @@ export type DeepPartial<T> = T extends Builtin ? T
   : Partial<T>;
 
 type KeysOfUnion<T> = T extends T ? keyof T : never;
-export type Exact<P, I extends P> = P extends Builtin ? P
-  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
+export type Exact<P, I> = P extends Builtin ? P
+  :
+    & P
+    & { [K in keyof P as Extract<K, keyof I>]: Exact<P[K], I[K & keyof I]> }
+    & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
 
 function isObject(value: any): boolean {
   return typeof value === "object" && value !== null;
