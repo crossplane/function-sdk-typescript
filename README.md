@@ -62,8 +62,14 @@ serve(compose);
 
 Every function served by `serve()` accepts the same standard flags and environment
 variables — `--address`/`ADDRESS`, `--max-recv-message-size`/`MAX_RECV_MESSAGE_SIZE` and
-so on. If your function needs flags of its own, declare them with the `CLI` class and
-hand it to `serve()`, which parses it, handles `--help` and reports usage errors:
+so on. `MAX_GRPC_MESSAGE_SIZE` is an alias that raises both the receive and send limits
+(unless the send limit is set separately), so one variable can configure every function
+in a pipeline; see
+[Message size limits](USAGE.md#message-size-limits), which also covers how the send limit
+changed from earlier versions.
+
+If your function needs flags of its own, declare them with the `CLI` class and hand it
+to `serve()`, which parses it, handles `--help` and reports usage errors:
 
 ```typescript
 import { CLI, serve } from "@crossplane-org/function-sdk-typescript";

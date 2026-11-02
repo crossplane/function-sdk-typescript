@@ -266,7 +266,8 @@ export class CLI {
     const rows = Object.entries(this.allFlags).map(([flag, spec]) => {
       const short = spec.short ? `-${spec.short}, ` : '    ';
       const value = spec.type === 'string' ? ' <value>' : '';
-      const env = spec.env ? ` [env: ${spec.env}]` : '';
+      const envKeys = [spec.env, ...(spec.envAliases ?? [])].filter(Boolean);
+      const env = envKeys.length > 0 ? ` [env: ${envKeys.join(', ')}]` : '';
       return { usage: `  ${short}--${flag}${value}`, description: spec.description + env };
     });
     // Size the column to the longest flag, so a long custom flag name cannot

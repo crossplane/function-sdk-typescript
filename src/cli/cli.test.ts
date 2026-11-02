@@ -411,12 +411,28 @@ describe('CLI', () => {
         'ADDRESS',
         'DEBUG',
         'INSECURE',
-        'MAX_RECV_MESSAGE_SIZE',
+        'MAX_RECV_MESSAGE_SIZE, MAX_GRPC_MESSAGE_SIZE',
         'MAX_SEND_MESSAGE_SIZE',
         'TLS_SERVER_CERTS_DIR',
       ]) {
         expect(help).toContain(`[env: ${env}]`);
       }
+    });
+
+    it('should list a flag’s environment variable aliases', () => {
+      const cli = new CLI({
+        name: 'test',
+        flags: {
+          'my-flag': {
+            type: 'string',
+            env: 'MY_FLAG',
+            envAliases: ['OLD_MY_FLAG'],
+            description: 'Test.',
+          },
+        },
+      });
+
+      expect(cli.helpText()).toContain('[env: MY_FLAG, OLD_MY_FLAG]');
     });
   });
 

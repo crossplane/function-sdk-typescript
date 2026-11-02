@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { CLI } from '../cli/cli.js';
 import {
   DEFAULT_ADDRESS,
   DEFAULT_TLS_SERVER_CERTS_DIR,
   fromCompose,
   helpText,
   parseArgs,
+  serve,
   usageErrorText,
   type ComposeFunction,
 } from './serve.js';
@@ -139,6 +141,79 @@ describe('helpText', () => {
     for (const flag of listed) {
       expect(() => parseArgs([`--${flag}`, 'x'])).not.toThrow(/Unknown option/);
     }
+  });
+});
+
+describe('serve', () => {
+  /** Thrown by the stubbed process.exit, so serve stops where the process would. */
+  class Exit extends Error {
+    constructor(readonly code: number | string | null | undefined) {
+      super(`process.exit(${code})`);
+    }
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** Run serve with argv, returning its exit code and what it wrote to stdout. */
+  function run(opts: Parameters<typeof serve>[1]): { code: unknown; stdout: string } {
+    vi.spyOn(process, 'exit').mockImplementation((code) => {
+      throw new Exit(code);
+    });
+    let stdout = '';
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      stdout += String(chunk);
+      return true;
+    });
+
+    try {
+      serve((_req, rsp) => rsp, opts);
+    } catch (error) {
+      if (error instanceof Exit) return { code: error.code, stdout };
+      throw error;
+    }
+    throw new Error('serve did not exit');
+  }
+
+  it('should print custom flags after the standard ones, leaving those untouched', () => {
+    const cli = new CLI({
+      name: 'my-fn',
+      flags: {
+        'cache-size': {
+          type: 'string',
+          default: '100',
+          env: 'CACHE_SIZE',
+          description: 'Number of entries to cache.',
+        },
+        verbose: { type: 'boolean', short: 'v', description: 'Enable verbose output.' },
+      },
+    });
+
+    const { code, stdout } = run({ cli, argv: ['--help'] });
+
+    expect(code).toBe(0);
+
+    // The standard flags print exactly as they do for a function with no
+    // flags of its own: same lines, same order, same alignment.
+    const standard = helpText('my-fn').split('\n');
+    const printed = stdout.trimEnd().split('\n');
+    expect(printed.slice(0, standard.length)).toEqual(standard);
+
+    // The custom flags follow, in declaration order, aligned to the same
+    // description column as the standard ones.
+    const column = standard.find((l) => l.includes('--address'))!.indexOf('Address');
+    expect(printed.slice(standard.length)).toEqual([
+      '      --cache-size <value>'.padEnd(column) + 'Number of entries to cache. [env: CACHE_SIZE]',
+      '  -v, --verbose'.padEnd(column) + 'Enable verbose output.',
+    ]);
+  });
+
+  it('should print only the standard flags without a CLI of its own', () => {
+    const { code, stdout } = run({ name: 'my-fn', argv: ['--help'] });
+
+    expect(code).toBe(0);
+    expect(stdout).toBe(`${helpText('my-fn')}\n`);
   });
 });
 

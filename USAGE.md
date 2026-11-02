@@ -168,6 +168,55 @@ command line wins over its environment variable, which wins over the default:
 Boolean environment variables are on when set to `true` or `1`. Message sizes must be
 positive whole numbers of megabytes; anything else is rejected at startup.
 
+#### Message size limits
+
+A function rejects any request larger than its receive limit, 4 MB by default. A
+composite resource with many composed resources can outgrow that, since every request
+carries the observed and desired state of all of them. Raise it with any of:
+
+- `--max-recv-message-size 16`
+- `MAX_RECV_MESSAGE_SIZE=16`
+- `MAX_GRPC_MESSAGE_SIZE=16`
+
+`MAX_GRPC_MESSAGE_SIZE` is an alias for `MAX_RECV_MESSAGE_SIZE`, meant for tooling or
+platform teams that set one size across every function in a pipeline. Because the send
+limit defaults to the receive limit, it raises both. If both variables are set,
+`MAX_RECV_MESSAGE_SIZE` wins.
+
+Functions run in pods that Crossplane manages, so set the variable through a
+`DeploymentRuntimeConfig`:
+
+```yaml
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: large-messages
+spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+            - name: package-runtime
+              env:
+                - name: MAX_GRPC_MESSAGE_SIZE
+                  value: "16"
+```
+
+#### Upgrading from earlier versions
+
+Two behaviour changes affect functions that call `serve()` without changing any code:
+
+- **Sent messages are now limited.** Earlier versions left the send limit at the
+  grpc-js default, which is unlimited. It now defaults to the receive limit, 4 MB
+  unless raised. A function that returns responses larger than that must raise
+  `--max-send-message-size` / `MAX_SEND_MESSAGE_SIZE`, or the receive limit.
+- **The standard environment variables are read.** Earlier versions of `serve()` only
+  read flags. A pod that already sets `ADDRESS`, `DEBUG`, `INSECURE`,
+  `TLS_SERVER_CERTS_DIR` or one of the message size variables for some other reason
+  will now pick it up.
+
 `serve()` takes an options object for the cases where the defaults do not fit:
 
 ```typescript
