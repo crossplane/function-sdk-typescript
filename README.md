@@ -60,13 +60,14 @@ serve(compose);
 
 ### Custom Flags with the Shareable CLI
 
-If your function needs its own command-line flags or environment variables, use the
-`CLI` class instead of calling `serve()` directly. It provides the same standard
-flags that `serve()` uses, plus a way to register your own:
+Every function served by `serve()` accepts the same standard flags and environment
+variables — `--address`/`ADDRESS`, `--max-recv-message-size`/`MAX_RECV_MESSAGE_SIZE` and
+so on. If your function needs flags of its own, declare them with the `CLI` class and
+hand it to `serve()`, which parses it, handles `--help` and reports usage errors:
 
 ```typescript
 import { CLI, serve } from "@crossplane-org/function-sdk-typescript";
-import { compose } from "./my-function.js";
+import { compose } from "./my-function.js"; // (req, rsp, cacheSize: number) => rsp
 
 const cli = new CLI({
     flags: {
@@ -74,13 +75,8 @@ const cli = new CLI({
     },
 });
 
-const parsed = cli.parse();
-if (parsed.help) {
-    process.stdout.write(cli.helpText() + "\n");
-    process.exit(0);
-}
-
-serve(compose, { argv: [], serverOptions: cli.standardOptions(), logger: cli.logger() });
+// serve() parses the CLI before any request arrives, so compose can read its values.
+serve((req, rsp) => compose(req, rsp, Number(cli.values["cache-size"])), { cli });
 ```
 
 See [USAGE.md](USAGE.md#custom-flags-with-the-shareable-cli) for the full list of

@@ -139,6 +139,8 @@ export class FunctionRunner {
  *
  * @param functionRunner - The FunctionRunner instance to handle requests
  * @param logger - Logger instance for debug logging
+ * @param opts - Message size limits in bytes. The send limit falls back to the
+ *   receive limit; with neither set, grpc-js's own defaults apply.
  * @returns A configured gRPC Server with the function service registered
  *
  * @example
@@ -153,11 +155,11 @@ export function getServer(
   opts?: { maxRecvMessageSize?: number; maxSendMessageSize?: number }
 ): grpc.Server {
   const channelOptions: grpc.ServerOptions = {};
-  if (opts?.maxRecvMessageSize) {
+  if (opts?.maxRecvMessageSize !== undefined) {
     channelOptions['grpc.max_receive_message_length'] = opts.maxRecvMessageSize;
   }
   const sendSize = opts?.maxSendMessageSize ?? opts?.maxRecvMessageSize;
-  if (sendSize) {
+  if (sendSize !== undefined) {
     channelOptions['grpc.max_send_message_length'] = sendSize;
   }
   const server = new grpc.Server(channelOptions);

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   DEFAULT_ADDRESS,
   DEFAULT_TLS_SERVER_CERTS_DIR,
@@ -12,6 +12,26 @@ import { Resource, RunFunctionRequest } from '../proto/run_function.js';
 import { Severity } from '../proto/run_function.js';
 import { fatal, to } from '../response/response.js';
 
+// parseArgs reads the standard environment variables, so clear them to keep
+// the tests independent of the environment they run in.
+const standardEnv = [
+  'ADDRESS',
+  'DEBUG',
+  'INSECURE',
+  'TLS_SERVER_CERTS_DIR',
+  'MAX_RECV_MESSAGE_SIZE',
+  'MAX_GRPC_MESSAGE_SIZE',
+  'MAX_SEND_MESSAGE_SIZE',
+];
+
+beforeEach(() => {
+  for (const key of standardEnv) vi.stubEnv(key, undefined);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe('parseArgs', () => {
   it('should default every flag', () => {
     expect(parseArgs([])).toEqual({
@@ -19,8 +39,27 @@ describe('parseArgs', () => {
       debug: false,
       insecure: false,
       tlsServerCertsDir: DEFAULT_TLS_SERVER_CERTS_DIR,
+      maxRecvMessageSize: 4 * 1024 * 1024,
+      maxSendMessageSize: undefined,
       help: false,
     });
+  });
+
+  it('should read the standard environment variables', () => {
+    // serve is built on parseArgs' parser, so this is what lets tooling
+    // configure every function the same way, whether or not it declares flags
+    // of its own.
+    vi.stubEnv('ADDRESS', '127.0.0.1:19999');
+    vi.stubEnv('MAX_RECV_MESSAGE_SIZE', '16');
+    const opts = parseArgs([]);
+    expect(opts.address).toBe('127.0.0.1:19999');
+    expect(opts.maxRecvMessageSize).toBe(16 * 1024 * 1024);
+  });
+
+  it('should parse the message size flags', () => {
+    const opts = parseArgs(['--max-recv-message-size', '16', '--max-send-message-size', '32']);
+    expect(opts.maxRecvMessageSize).toBe(16 * 1024 * 1024);
+    expect(opts.maxSendMessageSize).toBe(32 * 1024 * 1024);
   });
 
   it('should parse flags given as separate arguments', () => {
@@ -37,6 +76,8 @@ describe('parseArgs', () => {
       debug: true,
       insecure: true,
       tlsServerCertsDir: '/certs',
+      maxRecvMessageSize: 4 * 1024 * 1024,
+      maxSendMessageSize: undefined,
       help: false,
     });
   });
@@ -76,7 +117,15 @@ describe('helpText', () => {
   it('should name the program and list every flag', () => {
     const help = helpText('my-function');
     expect(help).toContain('Usage: my-function');
-    for (const flag of ['--address', '--debug', '--insecure', '--tls-server-certs-dir', '--help']) {
+    for (const flag of [
+      '--address',
+      '--debug',
+      '--insecure',
+      '--max-recv-message-size',
+      '--max-send-message-size',
+      '--tls-server-certs-dir',
+      '--help',
+    ]) {
       expect(help).toContain(flag);
     }
   });

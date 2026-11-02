@@ -151,7 +151,9 @@ That is the whole entry point. `serve()` parses the standard function flags, bui
 logger from `--debug`, starts the gRPC server, and shuts it down cleanly on `SIGINT`
 and `SIGTERM`. It accepts either a `ComposeFunction` or a `FunctionHandler`.
 
-Every function served this way accepts the same flags:
+Every function served this way accepts the same flags and environment variables, so
+tooling can configure every function in a pipeline the same way. A flag given on the
+command line wins over its environment variable, which wins over the default:
 
 | Flag | Env | Default | Description |
 |------|-----|---------|-------------|
@@ -159,8 +161,12 @@ Every function served this way accepts the same flags:
 | `--debug` / `-d` | `DEBUG` | `false` | Emit debug logs |
 | `--insecure` | `INSECURE` | `false` | Run without mTLS |
 | `--tls-server-certs-dir` | `TLS_SERVER_CERTS_DIR` | `/tls/server` | mTLS certificate directory |
-| `--max-recv-message-size` | `MAX_RECV_MESSAGE_SIZE` | `4` | Max gRPC message size in MB |
+| `--max-recv-message-size` | `MAX_RECV_MESSAGE_SIZE`, `MAX_GRPC_MESSAGE_SIZE` | `4` | Max received gRPC message size in MB |
+| `--max-send-message-size` | `MAX_SEND_MESSAGE_SIZE` | the receive size | Max sent gRPC message size in MB |
 | `--help` / `-h` | — | `false` | Show help text |
+
+Boolean environment variables are on when set to `true` or `1`. Message sizes must be
+positive whole numbers of megabytes; anything else is rejected at startup.
 
 `serve()` takes an options object for the cases where the defaults do not fit:
 
@@ -168,6 +174,7 @@ Every function served this way accepts the same flags:
 serve(compose, {
     name: "my-function",              // Program name shown in --help
     argv: ["--insecure"],             // Defaults to process.argv.slice(2)
+    cli: myCLI,                       // A CLI declaring flags of your own (see below)
     logger: myLogger,                 // Defaults to a pino logger built from --debug
     serverOptions: { insecure: true } // Overrides applied on top of the parsed flags
 });
@@ -190,15 +197,15 @@ node dist/main.js --tls-server-certs-dir /path/to/certs
 
 ### Custom Flags with the Shareable CLI
 
-If your function needs its own command-line flags or environment variables, use the
-`CLI` class. It provides the same standard flags that `serve()` uses, plus a way to
-register your own:
+If your function needs its own command-line flags or environment variables, declare
+them with the `CLI` class and hand it to `serve()`. `serve()` is built on the same
+class, so your function keeps every standard flag, and `--help` lists yours alongside
+them:
 
 ```typescript
 #!/usr/bin/env node
 
-import { CLI, serve } from "@crossplane-org/function-sdk-typescript";
-import { compose } from "./my-function.js";
+import { CLI, serve, type ComposeFunction } from "@crossplane-org/function-sdk-typescript";
 
 const cli = new CLI({
     flags: {
@@ -210,7 +217,6 @@ const cli = new CLI({
         },
         "verbose": {
             type: "boolean",
-            default: false,
             short: "v",
             env: "VERBOSE",
             description: "Enable verbose output.",
@@ -218,38 +224,34 @@ const cli = new CLI({
     },
 });
 
-try {
-    const parsed = cli.parse();
-    if (parsed.help) {
-        process.stdout.write(cli.helpText() + "\n");
-        process.exit(0);
-    }
+const compose: ComposeFunction = (req, rsp) => {
+    // serve() parses the CLI before the server starts, so its values are
+    // always available by the time a request arrives.
+    const cacheSize = Number(cli.values["cache-size"]);
+    // ...
+    return rsp;
+};
 
-    // Pass the CLI's standard options and logger to serve, skipping its
-    // internal argument parsing by supplying an empty argv.
-    serve(compose, {
-        argv: [],
-        serverOptions: cli.standardOptions(),
-        logger: cli.logger(),
-    });
-
-    const cacheSize = Number(parsed["cache-size"]);
-} catch (error) {
-    process.stderr.write(`${cli.name}: ${error instanceof Error ? error.message : error}\n`);
-    process.exit(2);
-}
+serve(compose, { cli });
 ```
+
+`serve()` parses the CLI, reports bad flags as usage errors, and handles `--help`. If you
+need the values before the server starts, call `cli.parse()` yourself first; `serve()`
+then uses those values rather than parsing again, though errors thrown by your own
+`parse()` call are yours to report.
 
 Each custom flag supports:
 
 - **`type`** — `"string"` or `"boolean"`.
-- **`default`** — Value used when neither the CLI argument nor the env var is set.
+- **`default`** — Value used when neither the CLI argument nor the env var is set. A
+  boolean flag can only default to `false`, since it could never be turned off.
 - **`short`** — Single-character alias (e.g. `-v`).
 - **`env`** — Environment variable name. Resolution order: CLI argument > env var > default.
+- **`envAliases`** — Further environment variables, checked in order when `env` is unset.
 - **`description`** — Shown in `--help` output.
 
-Custom flag names must not collide with the standard flags; the constructor throws if
-they do.
+The constructor throws if a custom flag reuses a standard flag's name or any other
+flag's short alias, or is a boolean flag defaulting to `true`.
 
 ### Building the Server Yourself
 
@@ -428,8 +430,10 @@ normal(rsp, "Function completed successfully");
 
 - `new CLI(opts?)` - Create a CLI with optional custom flags
 - `cli.parse(argv?)` - Parse arguments (CLI arg > env var > default)
-- `cli.standardOptions()` - Get `ServerOptions` from the standard flags
-- `cli.logger()` - Get a pino Logger configured from `--debug`
+- `cli.values` - The parsed values, keyed by flag name; throws before `parse()`
+- `cli.parsed` - Whether `parse()` has been called
+- `cli.standardOptions()` - Get `ServerOptions` from the standard flags; throws before `parse()`
+- `cli.logger()` - Get a pino Logger configured from `--debug`; throws before `parse()`
 - `cli.helpText()` - Generate help text including custom flags
 - `cli.name` - The program name used in help text
 

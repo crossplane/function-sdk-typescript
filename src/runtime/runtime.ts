@@ -44,13 +44,14 @@ export interface ServerOptions {
 
   /**
    * Maximum size of received gRPC messages in bytes.
-   * Default: 4 MB (4 * 1024 * 1024).
+   * Default: grpc-js's own limit of 4 MB (4 * 1024 * 1024).
    */
   maxRecvMessageSize?: number;
 
   /**
    * Maximum size of sent gRPC messages in bytes.
-   * Defaults to maxRecvMessageSize when not set.
+   * Defaults to maxRecvMessageSize when not set, and to grpc-js's own
+   * default (unlimited) when neither is set.
    */
   maxSendMessageSize?: number;
 }

@@ -3,11 +3,11 @@
  *
  * The {@link CLI} class provides the standard flags every composition function
  * accepts, reads environment variables, and lets function authors add custom
- * flags.
+ * flags. {@link serve} is built on it, so every function honours the same
+ * flags and environment variables whether or not it declares flags of its own.
  *
- * Simple functions that need no custom flags can keep using {@link serve}.
- * Functions that need extra flags create a CLI, parse it, then pass the
- * results to serve:
+ * Functions that need extra flags create a CLI and hand it to serve, which
+ * parses it, handles --help and reports usage errors:
  *
  * @example
  * ```typescript
@@ -17,13 +17,10 @@
  *   },
  * });
  *
- * const parsed = cli.parse();
- * if (parsed.help) {
- *   process.stdout.write(cli.helpText() + '\n');
- *   process.exit(0);
- * }
+ * serve(compose, { cli });
  *
- * serve(compose, { argv: [], serverOptions: cli.standardOptions(), logger: cli.logger() });
+ * // serve has parsed the CLI by the time it returns.
+ * const myFlag = cli.values['my-flag'];
  * ```
  */
 
@@ -32,13 +29,25 @@ import { parseArgs as parseNodeArgs } from 'node:util';
 import { pino, type Logger } from 'pino';
 import type { ServerOptions } from '../runtime/runtime.js';
 
-const DEFAULT_ADDRESS = '0.0.0.0:9443';
-const DEFAULT_MAX_RECV_MESSAGE_SIZE = 4;
-const DEFAULT_TLS_SERVER_CERTS_DIR = '/tls/server';
+/** The address a function listens on unless told otherwise. */
+export const DEFAULT_ADDRESS = '0.0.0.0:9443';
+
+/**
+ * Where the package reconciler mounts the TLS certificates it generates.
+ */
+export const DEFAULT_TLS_SERVER_CERTS_DIR = '/tls/server';
+
+/** The default maximum size of a received gRPC message, in megabytes. */
+export const DEFAULT_MAX_RECV_MESSAGE_SIZE = 4;
 
 /** Specification for a single CLI flag. */
 export interface FlagSpec {
   type: 'string' | 'boolean';
+  /**
+   * Value used when neither the flag nor its environment variable is set.
+   * Boolean flags may only default to false, since a boolean flag set on the
+   * command line can only turn something on.
+   */
   default?: string | boolean;
   short?: string;
   /** Primary environment variable. */
@@ -47,6 +56,9 @@ export interface FlagSpec {
   envAliases?: string[];
   description: string;
 }
+
+/** The value of a parsed flag. */
+export type FlagValue = string | boolean | undefined;
 
 const standardFlags: Record<string, FlagSpec> = {
   address: {
@@ -94,6 +106,9 @@ const standardFlags: Record<string, FlagSpec> = {
   },
 };
 
+/** Standard flags whose value is a whole number of megabytes. */
+const megabyteFlags = ['max-recv-message-size', 'max-send-message-size'];
+
 /** Options accepted by the {@link CLI} constructor. */
 export interface CLIOptions {
   /** Program name shown in help text. Defaults to the running script's basename. */
@@ -107,16 +122,20 @@ export interface CLIOptions {
  * A shareable, extensible CLI for Crossplane composition functions.
  *
  * Provides the standard flags (address, debug, insecure, tls-server-certs-dir,
- * max-recv-message-size, help) with environment variable support, and lets
- * function authors register additional flags.
+ * max-recv-message-size, max-send-message-size, help) with environment
+ * variable support, and lets function authors register additional flags.
  *
  * Resolution order per flag: CLI argument > environment variable > default.
  */
 export class CLI {
   private readonly programName: string;
   private readonly allFlags: Record<string, FlagSpec>;
-  private values: Record<string, string | boolean | undefined> = {};
+  private parsedValues?: Record<string, FlagValue>;
 
+  /**
+   * @throws If a custom flag reuses a standard flag's name or another flag's
+   *   short alias, or is a boolean flag that defaults to true.
+   */
   constructor(opts?: CLIOptions) {
     this.programName = opts?.name ?? defaultName();
 
@@ -127,6 +146,21 @@ export class CLI {
       }
     }
     this.allFlags = { ...standardFlags, ...custom };
+
+    const shorts = new Map<string, string>();
+    for (const [name, spec] of Object.entries(this.allFlags)) {
+      if (spec.type === 'boolean' && spec.default === true) {
+        throw new Error(
+          `boolean flag "${name}" cannot default to true, since it could not be turned off`
+        );
+      }
+      if (spec.short === undefined) continue;
+      const other = shorts.get(spec.short);
+      if (other !== undefined) {
+        throw new Error(`flag "${name}" reuses short alias -${spec.short} of flag "${other}"`);
+      }
+      shorts.set(spec.short, name);
+    }
   }
 
   /**
@@ -141,14 +175,13 @@ export class CLI {
    * @throws If a flag is unrecognized, missing its value, or given a value it
    *   does not accept.
    */
-  parse(argv?: string[]): Record<string, string | boolean | undefined> {
+  parse(argv?: string[]): Record<string, FlagValue> {
     const args = argv ?? process.argv.slice(2);
 
-    const parseOptions: Record<string, { type: string; short?: string; default?: boolean }> = {};
+    const parseOptions: Record<string, { type: string; short?: string }> = {};
     for (const [name, spec] of Object.entries(this.allFlags)) {
-      const opt: { type: string; short?: string; default?: boolean } = { type: spec.type };
+      const opt: { type: string; short?: string } = { type: spec.type };
       if (spec.short) opt.short = spec.short;
-      if (spec.type === 'boolean') opt.default = false;
       parseOptions[name] = opt;
     }
 
@@ -158,52 +191,88 @@ export class CLI {
       allowPositionals: false,
     });
 
-    const parsed = values as Record<string, string | boolean | undefined>;
+    const parsed = values as Record<string, FlagValue>;
 
+    const resolved: Record<string, FlagValue> = {};
     for (const [name, spec] of Object.entries(this.allFlags)) {
-      this.values[name] = resolveValue(spec, parsed[name]);
+      resolved[name] = resolveValue(spec, parsed[name]);
     }
 
-    return { ...this.values };
+    // Check the sizes now, so that a bad value is reported as a usage error
+    // rather than silently replaced by a default once the server starts.
+    for (const name of megabyteFlags) {
+      const value = resolved[name];
+      if (value !== undefined) toBytes(name, this.allFlags[name], String(value));
+    }
+
+    this.parsedValues = resolved;
+    return { ...resolved };
   }
 
-  /** Return {@link ServerOptions} derived from the standard flags. */
-  standardOptions(): ServerOptions {
-    const maxRecvMB = parseInt(String(this.values['max-recv-message-size']), 10);
-    const recvBytes = (isNaN(maxRecvMB) ? DEFAULT_MAX_RECV_MESSAGE_SIZE : maxRecvMB) * 1024 * 1024;
+  /**
+   * The values from the last call to {@link parse}.
+   *
+   * @throws If {@link parse} has not been called.
+   */
+  get values(): Readonly<Record<string, FlagValue>> {
+    if (this.parsedValues === undefined) {
+      throw new Error('CLI.parse() must be called before reading its values');
+    }
+    return this.parsedValues;
+  }
 
-    const sendRaw = this.values['max-send-message-size'];
-    const maxSendMB = sendRaw !== undefined ? parseInt(String(sendRaw), 10) : NaN;
-    const sendBytes = isNaN(maxSendMB) ? undefined : maxSendMB * 1024 * 1024;
+  /** Whether {@link parse} has been called. */
+  get parsed(): boolean {
+    return this.parsedValues !== undefined;
+  }
+
+  /**
+   * Return {@link ServerOptions} derived from the standard flags.
+   *
+   * @throws If {@link parse} has not been called.
+   */
+  standardOptions(): ServerOptions {
+    const values = this.values;
+    const send = values['max-send-message-size'];
 
     return {
-      address: this.values['address'] as string,
-      debug: this.values['debug'] as boolean,
-      insecure: this.values['insecure'] as boolean,
-      tlsServerCertsDir: this.values['tls-server-certs-dir'] as string,
-      maxRecvMessageSize: recvBytes,
-      maxSendMessageSize: sendBytes,
+      address: values['address'] as string,
+      debug: values['debug'] as boolean,
+      insecure: values['insecure'] as boolean,
+      tlsServerCertsDir: values['tls-server-certs-dir'] as string,
+      maxRecvMessageSize: toBytes(
+        'max-recv-message-size',
+        this.allFlags['max-recv-message-size'],
+        String(values['max-recv-message-size'])
+      ),
+      maxSendMessageSize:
+        send === undefined
+          ? undefined
+          : toBytes('max-send-message-size', this.allFlags['max-send-message-size'], String(send)),
     };
   }
 
-  /** Return a pino {@link Logger} configured from the --debug flag. */
+  /**
+   * Return a pino {@link Logger} configured from the --debug flag.
+   *
+   * @throws If {@link parse} has not been called.
+   */
   logger(): Logger {
-    return pino({
-      level: this.values['debug'] ? 'debug' : 'info',
-      formatters: {
-        level: (label: string) => ({ severity: label.toUpperCase() }),
-      },
-    });
+    return newLogger(this.values['debug'] === true);
   }
 
   /** Generate help text that includes both standard and custom flags. */
   helpText(): string {
-    const usage = Object.entries(this.allFlags).map(([flag, spec]) => {
+    const rows = Object.entries(this.allFlags).map(([flag, spec]) => {
       const short = spec.short ? `-${spec.short}, ` : '    ';
       const value = spec.type === 'string' ? ' <value>' : '';
       const env = spec.env ? ` [env: ${spec.env}]` : '';
-      return `  ${short}--${flag}${value}`.padEnd(38) + spec.description + env;
+      return { usage: `  ${short}--${flag}${value}`, description: spec.description + env };
     });
+    // Size the column to the longest flag, so a long custom flag name cannot
+    // run into its description.
+    const width = Math.max(...rows.map((r) => r.usage.length)) + 2;
+    const usage = rows.map((r) => r.usage.padEnd(width) + r.description);
     return [
       `Usage: ${this.programName} [flags]`,
       '',
@@ -220,14 +289,23 @@ export class CLI {
   }
 }
 
-function resolveValue(
-  spec: FlagSpec,
-  cliValue: string | boolean | undefined
-): string | boolean | undefined {
-  const givenOnCli =
-    spec.type === 'string' ? cliValue !== undefined : (cliValue as boolean) === true;
+/**
+ * Create the logger a function uses: JSON, with the level reported as
+ * `severity` so that log collectors pick it up.
+ */
+export function newLogger(debug: boolean): Logger {
+  return pino({
+    level: debug ? 'debug' : 'info',
+    formatters: {
+      level: (label: string) => ({ severity: label.toUpperCase() }),
+    },
+  });
+}
 
-  if (givenOnCli) return cliValue;
+function resolveValue(spec: FlagSpec, cliValue: FlagValue): FlagValue {
+  // node:util leaves a flag that was not given undefined, and a boolean flag
+  // can only be given as true, so undefined means "not on the command line".
+  if (cliValue !== undefined) return cliValue;
 
   const envKeys = [spec.env, ...(spec.envAliases ?? [])].filter(Boolean) as string[];
   for (const key of envKeys) {
@@ -239,7 +317,23 @@ function resolveValue(
     }
   }
 
-  return spec.default;
+  return spec.type === 'boolean' ? (spec.default ?? false) : spec.default;
+}
+
+/**
+ * Convert a size in megabytes to bytes.
+ *
+ * @throws If the value is not a positive whole number.
+ */
+function toBytes(name: string, spec: FlagSpec | undefined, value: string): number {
+  if (!/^[1-9][0-9]*$/.test(value)) {
+    const envKeys = [spec?.env, ...(spec?.envAliases ?? [])].filter(Boolean);
+    const source = [`--${name}`, ...envKeys].join(' or ');
+    throw new Error(
+      `${source} must be a positive whole number of megabytes, got ${JSON.stringify(value)}`
+    );
+  }
+  return Number(value) * 1024 * 1024;
 }
 
 function defaultName(): string {

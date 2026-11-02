@@ -109,6 +109,99 @@ describe('CLI', () => {
           })
       ).toThrow(/flag "debug" conflicts with a standard flag/);
     });
+
+    it('should reject a custom short alias that a standard flag uses', () => {
+      // Otherwise -d would silently keep meaning --debug, and the custom flag's
+      // alias would never take effect.
+      expect(
+        () =>
+          new CLI({
+            flags: { verbose: { type: 'boolean', short: 'd', description: 'Verbose.' } },
+          })
+      ).toThrow(/flag "verbose" reuses short alias -d of flag "debug"/);
+    });
+
+    it('should reject two custom flags sharing a short alias', () => {
+      expect(
+        () =>
+          new CLI({
+            flags: {
+              verbose: { type: 'boolean', short: 'v', description: 'Verbose.' },
+              version: { type: 'boolean', short: 'v', description: 'Version.' },
+            },
+          })
+      ).toThrow(/flag "version" reuses short alias -v of flag "verbose"/);
+    });
+
+    it('should reject a boolean flag that defaults to true', () => {
+      // A boolean flag on the command line can only turn something on, so one
+      // that is already on could never be turned off.
+      expect(
+        () =>
+          new CLI({
+            flags: { feature: { type: 'boolean', default: true, description: 'Feature.' } },
+          })
+      ).toThrow(/boolean flag "feature" cannot default to true/);
+    });
+
+    it('should default a custom boolean flag without a declared default to false', () => {
+      const cli = new CLI({
+        flags: { verbose: { type: 'boolean', description: 'Verbose.' } },
+      });
+      expect(cli.parse([]).verbose).toBe(false);
+    });
+
+    it('should reject a message size that is not a whole number', () => {
+      const cli = new CLI({ name: 'test' });
+      expect(() => cli.parse(['--max-recv-message-size', 'eight'])).toThrow(
+        /--max-recv-message-size or MAX_RECV_MESSAGE_SIZE or MAX_GRPC_MESSAGE_SIZE must be a positive whole number of megabytes, got "eight"/
+      );
+      expect(() => cli.parse(['--max-send-message-size', '1.5'])).toThrow(
+        /--max-send-message-size or MAX_SEND_MESSAGE_SIZE must be a positive whole number/
+      );
+    });
+
+    it('should reject a message size that is zero or negative', () => {
+      const cli = new CLI({ name: 'test' });
+      expect(() => cli.parse(['--max-recv-message-size', '0'])).toThrow(/got "0"/);
+      expect(() => cli.parse(['--max-recv-message-size=-1'])).toThrow(/got "-1"/);
+    });
+
+    it('should reject a message size with a unit from the environment', () => {
+      // parseInt would read this as 16 and drop the unit without a word.
+      process.env.MAX_RECV_MESSAGE_SIZE = '16MB';
+      const cli = new CLI({ name: 'test' });
+      expect(() => cli.parse([])).toThrow(/got "16MB"/);
+    });
+  });
+
+  describe('before parse', () => {
+    it('should refuse to return values', () => {
+      expect(() => new CLI({ name: 'test' }).values).toThrow(/parse\(\) must be called/);
+    });
+
+    it('should refuse to return standard options', () => {
+      // Returning undefineds instead would override serve's own defaults and
+      // reach grpc-js as an undefined listen address.
+      expect(() => new CLI({ name: 'test' }).standardOptions()).toThrow(/parse\(\) must be called/);
+    });
+
+    it('should refuse to build a logger', () => {
+      expect(() => new CLI({ name: 'test' }).logger()).toThrow(/parse\(\) must be called/);
+    });
+
+    it('should report whether it has been parsed', () => {
+      const cli = new CLI({ name: 'test' });
+      expect(cli.parsed).toBe(false);
+      cli.parse([]);
+      expect(cli.parsed).toBe(true);
+    });
+
+    it('should not record values from a parse that failed', () => {
+      const cli = new CLI({ name: 'test' });
+      expect(() => cli.parse(['--max-recv-message-size', 'eight'])).toThrow();
+      expect(cli.parsed).toBe(false);
+    });
   });
 
   describe('environment variables', () => {
@@ -234,6 +327,16 @@ describe('CLI', () => {
       expect(cli.standardOptions().maxSendMessageSize).toBe(16 * 1024 * 1024);
     });
 
+    it('should read message sizes from the environment', () => {
+      process.env.MAX_GRPC_MESSAGE_SIZE = '16';
+      process.env.MAX_SEND_MESSAGE_SIZE = '32';
+      const cli = new CLI({ name: 'test' });
+      cli.parse([]);
+
+      expect(cli.standardOptions().maxRecvMessageSize).toBe(16 * 1024 * 1024);
+      expect(cli.standardOptions().maxSendMessageSize).toBe(32 * 1024 * 1024);
+    });
+
     it('should reflect env vars in standard options', () => {
       process.env.ADDRESS = 'env:1111';
       process.env.DEBUG = 'true';
@@ -321,6 +424,19 @@ describe('CLI', () => {
     it('should return the configured program name', () => {
       const cli = new CLI({ name: 'my-function' });
       expect(cli.name).toBe('my-function');
+    });
+  });
+
+  describe('values', () => {
+    it('should return the values from the last parse', () => {
+      const cli = new CLI({
+        name: 'test',
+        flags: { 'my-flag': { type: 'string', default: 'foo', description: 'Test.' } },
+      });
+      cli.parse(['--my-flag', 'bar']);
+
+      expect(cli.values['my-flag']).toBe('bar');
+      expect(cli.values.address).toBe('0.0.0.0:9443');
     });
   });
 });
