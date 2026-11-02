@@ -5,7 +5,7 @@ WORKDIR /function
 RUN npm ci --no-fund
 RUN npm run build 
 
-FROM gcr.io/distroless/nodejs24-debian12 AS image
+FROM gcr.io/distroless/nodejs26-debian13 AS image
 COPY --from=build-env /function /function
 EXPOSE 9443
 USER nonroot:nonroot
