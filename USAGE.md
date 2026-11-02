@@ -151,20 +151,82 @@ That is the whole entry point. `serve()` parses the standard function flags, bui
 logger from `--debug`, starts the gRPC server, and shuts it down cleanly on `SIGINT`
 and `SIGTERM`. It accepts either a `ComposeFunction` or a `FunctionHandler`.
 
-Every function served this way accepts the same flags:
+Every function served this way accepts the same flags and environment variables, so
+tooling can configure every function in a pipeline the same way. A flag given on the
+command line wins over its environment variable, which wins over the default:
 
+| Flag | Env | Default | Description |
+|------|-----|---------|-------------|
+| `--address` | `ADDRESS` | `0.0.0.0:9443` | gRPC listen address |
+| `--debug` / `-d` | `DEBUG` | `false` | Emit debug logs |
+| `--insecure` | `INSECURE` | `false` | Run without mTLS |
+| `--tls-server-certs-dir` | `TLS_SERVER_CERTS_DIR` | `/tls/server` | mTLS certificate directory |
+| `--max-recv-message-size` | `MAX_RECV_MESSAGE_SIZE`, `MAX_GRPC_MESSAGE_SIZE` | `4` | Max received gRPC message size in MB |
+| `--max-send-message-size` | `MAX_SEND_MESSAGE_SIZE` | the receive size | Max sent gRPC message size in MB |
+| `--help` / `-h` | — | `false` | Show help text |
+
+Boolean environment variables are on when set to `true` or `1`. An empty value — a
+variable set to `""`, or an empty argument — is treated as unset, so it falls through to
+the default rather than reaching the server. Message sizes must be whole numbers of
+megabytes between 1 and 2047; anything else is rejected at startup.
+
+#### Message size limits
+
+A function rejects any request larger than its receive limit, 4 MB by default. A
+composite resource with many composed resources can outgrow that, since every request
+carries the observed and desired state of all of them. Raise it with any of:
+
+- `--max-recv-message-size 16`
+- `MAX_RECV_MESSAGE_SIZE=16`
+- `MAX_GRPC_MESSAGE_SIZE=16`
+
+`MAX_GRPC_MESSAGE_SIZE` is an alias for `MAX_RECV_MESSAGE_SIZE`, meant for tooling or
+platform teams that set one size across every function in a pipeline. Because the send
+limit defaults to the receive limit, it raises both. If both variables are set,
+`MAX_RECV_MESSAGE_SIZE` wins.
+
+A size must be a whole number of megabytes between 1 and 2047, the most gRPC's message
+size channel arguments can hold; `8`, `0008` and `2047` are accepted, `0`, `8.5`, `8MB`
+and `4096` are rejected at startup.
+
+Functions run in pods that Crossplane manages, so set the variable through a
+`DeploymentRuntimeConfig`:
+
+```yaml
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: large-messages
+spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+            - name: package-runtime
+              env:
+                - name: MAX_GRPC_MESSAGE_SIZE
+                  value: "16"
 ```
-Usage: main.js [flags]
 
-A Crossplane composition function.
+#### Upgrading from earlier versions
 
-Flags:
-      --address <value>               Address to listen for gRPC connections. Default 0.0.0.0:9443.
-  -d, --debug                         Emit debug logs.
-      --insecure                      Run without mTLS credentials.
-      --tls-server-certs-dir <value>  Directory holding tls.key, tls.crt and ca.crt. Default /tls/server.
-  -h, --help                          Show this help.
-```
+Two behaviour changes affect functions that call `serve()` without changing any code:
+
+- **Sent messages are now limited.** Earlier versions left the send limit at the
+  grpc-js default, which is unlimited. It now defaults to the receive limit, 4 MB
+  unless raised. A function that returns responses larger than that must raise
+  `--max-send-message-size` / `MAX_SEND_MESSAGE_SIZE`, or the receive limit.
+- **The standard environment variables are read.** Earlier versions of `serve()` only
+  read flags. A pod that already sets `ADDRESS`, `DEBUG`, `INSECURE`,
+  `TLS_SERVER_CERTS_DIR` or one of the message size variables for some other reason
+  will now pick it up. An empty value is treated as unset, so `value: ""` in a pod
+  spec falls back to the default rather than replacing it.
+- **A function that cannot bind exits non-zero.** Earlier versions logged a bind error
+  and exited 0, leaving a container running with nothing listening behind it. The
+  process now exits 1 when the address cannot be bound, and 2 when the address itself
+  is unparsable, so a supervisor or readiness probe can see the failure.
 
 `serve()` takes an options object for the cases where the defaults do not fit:
 
@@ -172,6 +234,7 @@ Flags:
 serve(compose, {
     name: "my-function",              // Program name shown in --help
     argv: ["--insecure"],             // Defaults to process.argv.slice(2)
+    cli: myCLI,                       // A CLI declaring flags of your own (see below)
     logger: myLogger,                 // Defaults to a pino logger built from --debug
     serverOptions: { insecure: true } // Overrides applied on top of the parsed flags
 });
@@ -191,6 +254,64 @@ node dist/main.js --tls-server-certs-dir /path/to/certs
 ```
 
 ## Advanced Usage
+
+### Custom Flags with the Shareable CLI
+
+If your function needs its own command-line flags or environment variables, declare
+them with the `CLI` class and hand it to `serve()`. `serve()` is built on the same
+class, so your function keeps every standard flag, and `--help` lists yours alongside
+them:
+
+```typescript
+#!/usr/bin/env node
+
+import { CLI, serve, type ComposeFunction } from "@crossplane-org/function-sdk-typescript";
+
+const cli = new CLI({
+    flags: {
+        "cache-size": {
+            type: "string",
+            default: "100",
+            env: "CACHE_SIZE",
+            description: "Number of entries to cache.",
+        },
+        "verbose": {
+            type: "boolean",
+            short: "v",
+            env: "VERBOSE",
+            description: "Enable verbose output.",
+        },
+    },
+});
+
+const compose: ComposeFunction = (req, rsp) => {
+    // serve() parses the CLI before the server starts, so its values are
+    // always available by the time a request arrives.
+    const cacheSize = Number(cli.values["cache-size"]);
+    // ...
+    return rsp;
+};
+
+serve(compose, { cli });
+```
+
+`serve()` parses the CLI, reports bad flags as usage errors, and handles `--help`. If you
+need the values before the server starts, call `cli.parse()` yourself first; `serve()`
+then uses those values rather than parsing again, though errors thrown by your own
+`parse()` call are yours to report.
+
+Each custom flag supports:
+
+- **`type`** — `"string"` or `"boolean"`.
+- **`default`** — Value used when neither the CLI argument nor the env var is set. A
+  boolean flag can only default to `false`, since it could never be turned off.
+- **`short`** — Single-character alias (e.g. `-v`).
+- **`env`** — Environment variable name. Resolution order: CLI argument > env var > default.
+- **`envAliases`** — Further environment variables, checked in order when `env` is unset.
+- **`description`** — Shown in `--help` output.
+
+The constructor throws if a custom flag reuses a standard flag's name or any other
+flag's short alias, or is a boolean flag defaulting to `true`.
 
 ### Building the Server Yourself
 
@@ -364,6 +485,17 @@ normal(rsp, "Function completed successfully");
 - `warning(rsp, message)` - Add warning result (continues pipeline)
 - `normal(rsp, message)` - Add normal info result
 - `update(source, target)` - Deep merge resources using ts-deepmerge
+
+### Shareable CLI
+
+- `new CLI(opts?)` - Create a CLI with optional custom flags
+- `cli.parse(argv?)` - Parse arguments (CLI arg > env var > default)
+- `cli.values` - The parsed values, keyed by flag name; throws before `parse()`
+- `cli.parsed` - Whether `parse()` has been called
+- `cli.standardOptions()` - Get `ServerOptions` from the standard flags; throws before `parse()`
+- `cli.logger()` - Get a pino Logger configured from `--debug`; throws before `parse()`
+- `cli.helpText()` - Generate help text including custom flags
+- `cli.name` - The program name used in help text
 
 ### Runtime
 
