@@ -1,16 +1,38 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { CLI } from '../cli/cli.js';
 import {
   DEFAULT_ADDRESS,
   DEFAULT_TLS_SERVER_CERTS_DIR,
   fromCompose,
   helpText,
   parseArgs,
+  serve,
   usageErrorText,
   type ComposeFunction,
 } from './serve.js';
 import { Resource, RunFunctionRequest } from '../proto/run_function.js';
 import { Severity } from '../proto/run_function.js';
 import { fatal, to } from '../response/response.js';
+
+// parseArgs reads the standard environment variables, so clear them to keep
+// the tests independent of the environment they run in.
+const standardEnv = [
+  'ADDRESS',
+  'DEBUG',
+  'INSECURE',
+  'TLS_SERVER_CERTS_DIR',
+  'MAX_RECV_MESSAGE_SIZE',
+  'MAX_GRPC_MESSAGE_SIZE',
+  'MAX_SEND_MESSAGE_SIZE',
+];
+
+beforeEach(() => {
+  for (const key of standardEnv) vi.stubEnv(key, undefined);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe('parseArgs', () => {
   it('should default every flag', () => {
@@ -19,6 +41,41 @@ describe('parseArgs', () => {
       debug: false,
       insecure: false,
       tlsServerCertsDir: DEFAULT_TLS_SERVER_CERTS_DIR,
+      maxRecvMessageSize: 4 * 1024 * 1024,
+      maxSendMessageSize: undefined,
+      help: false,
+    });
+  });
+
+  it('should read the standard environment variables', () => {
+    // serve is built on parseArgs' parser, so this is what lets tooling
+    // configure every function the same way, whether or not it declares flags
+    // of its own.
+    vi.stubEnv('ADDRESS', '127.0.0.1:19999');
+    vi.stubEnv('MAX_RECV_MESSAGE_SIZE', '16');
+    const opts = parseArgs([]);
+    expect(opts.address).toBe('127.0.0.1:19999');
+    expect(opts.maxRecvMessageSize).toBe(16 * 1024 * 1024);
+  });
+
+  it('should parse the message size flags', () => {
+    const opts = parseArgs(['--max-recv-message-size', '16', '--max-send-message-size', '32']);
+    expect(opts.maxRecvMessageSize).toBe(16 * 1024 * 1024);
+    expect(opts.maxSendMessageSize).toBe(32 * 1024 * 1024);
+  });
+
+  it('should treat an empty environment variable as unset', () => {
+    // A container that sets value: "" for one of these variables would
+    // otherwise take the default away and hand the server an empty address.
+    for (const key of standardEnv) vi.stubEnv(key, '');
+
+    expect(parseArgs([])).toEqual({
+      address: DEFAULT_ADDRESS,
+      debug: false,
+      insecure: false,
+      tlsServerCertsDir: DEFAULT_TLS_SERVER_CERTS_DIR,
+      maxRecvMessageSize: 4 * 1024 * 1024,
+      maxSendMessageSize: undefined,
       help: false,
     });
   });
@@ -37,6 +94,8 @@ describe('parseArgs', () => {
       debug: true,
       insecure: true,
       tlsServerCertsDir: '/certs',
+      maxRecvMessageSize: 4 * 1024 * 1024,
+      maxSendMessageSize: undefined,
       help: false,
     });
   });
@@ -76,7 +135,15 @@ describe('helpText', () => {
   it('should name the program and list every flag', () => {
     const help = helpText('my-function');
     expect(help).toContain('Usage: my-function');
-    for (const flag of ['--address', '--debug', '--insecure', '--tls-server-certs-dir', '--help']) {
+    for (const flag of [
+      '--address',
+      '--debug',
+      '--insecure',
+      '--max-recv-message-size',
+      '--max-send-message-size',
+      '--tls-server-certs-dir',
+      '--help',
+    ]) {
       expect(help).toContain(flag);
     }
   });
@@ -90,6 +157,103 @@ describe('helpText', () => {
     for (const flag of listed) {
       expect(() => parseArgs([`--${flag}`, 'x'])).not.toThrow(/Unknown option/);
     }
+  });
+});
+
+describe('serve', () => {
+  /** Thrown by the stubbed process.exit, so serve stops where the process would. */
+  class Exit extends Error {
+    constructor(readonly code: number | string | null | undefined) {
+      super(`process.exit(${code})`);
+    }
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** Run serve with argv, returning its exit code and what it wrote to stdout. */
+  function run(opts: Parameters<typeof serve>[1]): {
+    code: unknown;
+    stdout: string;
+    stderr: string;
+  } {
+    vi.spyOn(process, 'exit').mockImplementation((code) => {
+      throw new Exit(code);
+    });
+    let stdout = '';
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      stdout += String(chunk);
+      return true;
+    });
+    let stderr = '';
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      stderr += String(chunk);
+      return true;
+    });
+
+    try {
+      serve((_req, rsp) => rsp, opts);
+    } catch (error) {
+      if (error instanceof Exit) return { code: error.code, stdout, stderr };
+      throw error;
+    }
+    throw new Error('serve did not exit');
+  }
+
+  it('should print custom flags after the standard ones, leaving those untouched', () => {
+    const cli = new CLI({
+      name: 'my-fn',
+      flags: {
+        'cache-size': {
+          type: 'string',
+          default: '100',
+          env: 'CACHE_SIZE',
+          description: 'Number of entries to cache.',
+        },
+        verbose: { type: 'boolean', short: 'v', description: 'Enable verbose output.' },
+      },
+    });
+
+    const { code, stdout } = run({ cli, argv: ['--help'] });
+
+    expect(code).toBe(0);
+
+    // The standard flags print exactly as they do for a function with no
+    // flags of its own: same lines, same order, same alignment.
+    const standard = helpText('my-fn').split('\n');
+    const printed = stdout.trimEnd().split('\n');
+    expect(printed.slice(0, standard.length)).toEqual(standard);
+
+    // The custom flags follow, in declaration order, aligned to the same
+    // description column as the standard ones.
+    const column = standard.find((l) => l.includes('--address'))!.indexOf('Address');
+    expect(printed.slice(standard.length)).toEqual([
+      '      --cache-size <value>'.padEnd(column) + 'Number of entries to cache. [env: CACHE_SIZE]',
+      '  -v, --verbose'.padEnd(column) + 'Enable verbose output.',
+    ]);
+  });
+
+  it('should print only the standard flags without a CLI of its own', () => {
+    const { code, stdout } = run({ name: 'my-fn', argv: ['--help'] });
+
+    expect(code).toBe(0);
+    expect(stdout).toBe(`${helpText('my-fn')}\n`);
+  });
+
+  it('should report an address grpc-js cannot parse as a usage error', () => {
+    // grpc-js throws this synchronously from bindAsync, so without catching
+    // it the process dies with a stack trace through grpc-js's internals.
+    const { code, stderr } = run({
+      name: 'my-fn',
+      argv: [],
+      // insecure, so we reach bindAsync instead of reading TLS certs.
+      serverOptions: { address: '', insecure: true },
+    });
+
+    expect(code).toBe(2);
+    expect(stderr).toContain('my-fn: Could not parse port ""');
+    expect(stderr).toContain("Try 'my-fn --help' for the available flags.");
   });
 });
 

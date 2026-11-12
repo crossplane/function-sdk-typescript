@@ -61,6 +61,15 @@ export {
   update as updateResource,
 } from './resource/resource.js';
 
+// Shareable CLI
+export {
+  CLI,
+  type CLIOptions,
+  DEFAULT_MAX_RECV_MESSAGE_SIZE,
+  type FlagSpec,
+  type FlagValue,
+} from './cli/cli.js';
+
 // Runtime utilities
 export {
   getServerCredentials,

@@ -41,6 +41,19 @@ export interface ServerOptions {
    * Ignored if insecure is set to true.
    */
   tlsServerCertsDir?: string;
+
+  /**
+   * Maximum size of received gRPC messages in bytes.
+   * Default: grpc-js's own limit of 4 MB (4 * 1024 * 1024).
+   */
+  maxRecvMessageSize?: number;
+
+  /**
+   * Maximum size of sent gRPC messages in bytes.
+   * Defaults to maxRecvMessageSize when not set, and to grpc-js's own
+   * default (unlimited) when neither is set.
+   */
+  maxSendMessageSize?: number;
 }
 
 /**
@@ -112,8 +125,12 @@ export function getServerCredentials(opts?: ServerOptions): grpc.ServerCredentia
  * startServer(server, { address: ":9443", insecure: false }, logger);
  * ```
  */
-export function newGrpcServer(functionRunner: FunctionRunner, logger: Logger): grpc.Server {
-  const server = getServer(functionRunner, logger);
+export function newGrpcServer(
+  functionRunner: FunctionRunner,
+  logger: Logger,
+  opts?: Pick<ServerOptions, 'maxRecvMessageSize' | 'maxSendMessageSize'>
+): grpc.Server {
+  const server = getServer(functionRunner, logger, opts);
   if (logger) {
     logger.debug('grpc server created');
   }
@@ -128,7 +145,9 @@ export function newGrpcServer(functionRunner: FunctionRunner, logger: Logger): g
  * based on the provided options. The binding happens asynchronously.
  *
  * The server will log when it successfully starts listening or if an error occurs
- * during binding.
+ * during binding. If binding fails the process exits non-zero: a function that
+ * cannot listen is not serving, and reporting success would leave a container
+ * running with nothing behind it.
  *
  * @param server - The gRPC Server instance to start
  * @param opts - Server options including address and TLS configuration
@@ -158,7 +177,7 @@ export function startServer(server: grpc.Server, opts: ServerOptions, logger: Lo
   server.bindAsync(opts.address, creds, (err) => {
     if (err) {
       logger.error(`server bind error: ${err.message}`);
-      return;
+      process.exit(1);
     }
     logger.info(`server started and listening on ${opts.address}`);
   });

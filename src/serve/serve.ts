@@ -13,21 +13,14 @@
  */
 
 import * as grpc from '@grpc/grpc-js';
-import { basename } from 'node:path';
-import { parseArgs as parseNodeArgs } from 'node:util';
-import { pino, type Logger } from 'pino';
+import type { Logger } from 'pino';
+import { CLI, newLogger } from '../cli/cli.js';
 import { FunctionRunner, type FunctionHandler } from '../function/function.js';
 import { newGrpcServer, startServer, type ServerOptions } from '../runtime/runtime.js';
 import { to } from '../response/response.js';
 import type { RunFunctionRequest, RunFunctionResponse, State } from '../proto/run_function.js';
 
-/** The address a function listens on unless told otherwise. */
-export const DEFAULT_ADDRESS = '0.0.0.0:9443';
-
-/**
- * Where the package reconciler mounts the TLS certificates it generates.
- */
-export const DEFAULT_TLS_SERVER_CERTS_DIR = '/tls/server';
+export { DEFAULT_ADDRESS, DEFAULT_TLS_SERVER_CERTS_DIR } from '../cli/cli.js';
 
 /**
  * A RunFunctionResponse whose desired state is guaranteed to be present.
@@ -37,18 +30,6 @@ export const DEFAULT_TLS_SERVER_CERTS_DIR = '/tls/server';
  * `rsp.desired.resources[name]` without a non-null assertion.
  */
 export type ComposeResponse = RunFunctionResponse & { desired: State };
-
-/**
- * The program name to show in --help when the caller does not supply one.
- *
- * Taken from the script being run, the way most command line tools do it, so
- * the help of a function started as `node dist/main.js` says `main.js` rather
- * than something generic.
- */
-function defaultName(): string {
-  const script = process.argv[1];
-  return script ? basename(script) : 'function';
-}
 
 /**
  * A composition function.
@@ -108,15 +89,24 @@ export function fromCompose(compose: ComposeFunction): FunctionHandler {
 export interface ServeOptions {
   /**
    * Program name shown in --help. Defaults to the basename of the running
-   * script.
+   * script. Ignored when {@link cli} is given, since the CLI has its own name.
    */
   name?: string;
 
   /**
    * Arguments to parse, without the node executable or script path.
-   * Defaults to process.argv.slice(2).
+   * Defaults to process.argv.slice(2). Ignored when {@link cli} is given and
+   * has already been parsed.
    */
   argv?: string[];
+
+  /**
+   * A {@link CLI} declaring flags of the function's own, alongside the
+   * standard ones. serve parses it unless it has been parsed already, and its
+   * help text is what --help prints. Defaults to a CLI with only the standard
+   * flags.
+   */
+  cli?: CLI;
 
   /**
    * Logger to use. One is created from the parsed --debug flag if omitted.
@@ -127,33 +117,6 @@ export interface ServeOptions {
   serverOptions?: Partial<ServerOptions>;
 }
 
-/**
- * The flags every composition function accepts.
- *
- * This is the single source of truth: both the parser and the help text are
- * derived from it, so a flag cannot be added to one and forgotten in the
- * other.
- */
-const flags = {
-  address: { type: 'string', default: DEFAULT_ADDRESS },
-  debug: { type: 'boolean', short: 'd', default: false },
-  insecure: { type: 'boolean', default: false },
-  'tls-server-certs-dir': { type: 'string', default: DEFAULT_TLS_SERVER_CERTS_DIR },
-  help: { type: 'boolean', short: 'h', default: false },
-} as const;
-
-/**
- * What each flag does. Keyed by {@link flags}, so adding a flag without
- * describing it is a compile error.
- */
-const descriptions: Record<keyof typeof flags, string> = {
-  address: `Address to listen for gRPC connections. Default ${DEFAULT_ADDRESS}.`,
-  debug: 'Emit debug logs.',
-  insecure: 'Run without mTLS credentials.',
-  'tls-server-certs-dir': `Directory holding tls.key, tls.crt and ca.crt. Default ${DEFAULT_TLS_SERVER_CERTS_DIR}.`,
-  help: 'Show this help.',
-};
-
 /** The result of {@link parseArgs}: server options, plus whether help was asked for. */
 export interface ParsedArgs extends ServerOptions {
   /** Whether --help or -h was given. */
@@ -161,10 +124,10 @@ export interface ParsedArgs extends ServerOptions {
 }
 
 /**
- * Parse the standard function command line flags.
+ * Parse the standard function command line flags and environment variables.
  *
- * Exported so that it can be tested, and so that a function needing extra
- * flags of its own can reuse the standard ones.
+ * A shorthand for parsing a {@link CLI} with no flags of its own. Exported so
+ * that it can be tested.
  *
  * @param argv - Arguments without the node executable or script path.
  * @returns The parsed options.
@@ -172,31 +135,14 @@ export interface ParsedArgs extends ServerOptions {
  *   does not take.
  */
 export function parseArgs(argv: string[]): ParsedArgs {
-  const { values } = parseNodeArgs({ args: argv, options: flags, allowPositionals: false });
-  return {
-    address: values.address,
-    debug: values.debug,
-    insecure: values.insecure,
-    tlsServerCertsDir: values['tls-server-certs-dir'],
-    help: values.help,
-  };
+  const cli = new CLI();
+  const values = cli.parse(argv);
+  return { ...cli.standardOptions(), help: values.help === true };
 }
 
-/** The --help text, derived from {@link flags} and {@link descriptions}. */
+/** The --help text for a function with only the standard flags. */
 export function helpText(name: string): string {
-  const usage = Object.entries(flags).map(([flag, spec]) => {
-    const short = 'short' in spec ? `-${spec.short}, ` : '    ';
-    const value = spec.type === 'string' ? ' <value>' : '';
-    return `  ${short}--${flag}${value}`.padEnd(38) + descriptions[flag as keyof typeof flags];
-  });
-  return [
-    `Usage: ${name} [flags]`,
-    '',
-    'A Crossplane composition function.',
-    '',
-    'Flags:',
-    ...usage,
-  ].join('\n');
+  return new CLI({ name }).helpText();
 }
 
 /**
@@ -232,42 +178,45 @@ export function usageErrorText(name: string, error: unknown): string {
  * ```
  */
 export function serve(fn: ComposeFunction | FunctionHandler, opts: ServeOptions = {}): grpc.Server {
-  const name = opts.name ?? defaultName();
-  const argv = opts.argv ?? process.argv.slice(2);
+  const cli = opts.cli ?? new CLI({ name: opts.name });
 
-  let args: ParsedArgs;
-  try {
-    args = parseArgs(argv);
-  } catch (error) {
-    // node:util throws a TypeError whose message is exactly what the user
-    // needs to see. Without this it reaches the top level and Node prints it
-    // under a stack trace through its own internals, which buries it.
-    process.stderr.write(`${usageErrorText(name, error)}\n`);
-    process.exit(2);
+  if (!cli.parsed) {
+    try {
+      cli.parse(opts.argv ?? process.argv.slice(2));
+    } catch (error) {
+      // node:util throws a TypeError whose message is exactly what the user
+      // needs to see. Without this it reaches the top level and Node prints it
+      // under a stack trace through its own internals, which buries it.
+      process.stderr.write(`${usageErrorText(cli.name, error)}\n`);
+      process.exit(2);
+    }
   }
 
-  const { help, ...parsed } = args;
-  if (help) {
-    process.stdout.write(`${helpText(name)}\n`);
+  if (cli.values.help === true) {
+    process.stdout.write(`${cli.helpText()}\n`);
     process.exit(0);
   }
 
-  const serverOptions: ServerOptions = { ...parsed, ...opts.serverOptions };
+  const serverOptions: ServerOptions = { ...cli.standardOptions(), ...opts.serverOptions };
 
-  const logger =
-    opts.logger ??
-    pino({
-      level: serverOptions.debug ? 'debug' : 'info',
-      formatters: {
-        level: (label: string) => ({ severity: label.toUpperCase() }),
-      },
-    });
+  const logger = opts.logger ?? newLogger(serverOptions.debug === true);
 
   logger.debug({ options: serverOptions }, 'starting function');
 
   const handler: FunctionHandler = typeof fn === 'function' ? fromCompose(fn) : fn;
-  const server = newGrpcServer(new FunctionRunner(handler, logger), logger);
-  startServer(server, serverOptions, logger);
+  const server = newGrpcServer(new FunctionRunner(handler, logger), logger, {
+    maxRecvMessageSize: serverOptions.maxRecvMessageSize,
+    maxSendMessageSize: serverOptions.maxSendMessageSize,
+  });
+  try {
+    startServer(server, serverOptions, logger);
+  } catch (error) {
+    // grpc-js throws synchronously for an address it cannot parse at all. Let
+    // it out and it reaches the top level as a stack trace through grpc-js's
+    // own internals; this is a bad value for a flag, so report it as one.
+    process.stderr.write(`${usageErrorText(cli.name, error)}\n`);
+    process.exit(2);
+  }
 
   const shutdown = (signal: string): void => {
     logger.info(`received ${signal}, shutting down`);
