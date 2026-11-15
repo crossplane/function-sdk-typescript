@@ -212,7 +212,7 @@ spec:
 
 #### Upgrading from earlier versions
 
-Two behaviour changes affect functions that call `serve()` without changing any code:
+Three behaviour changes affect functions that call `serve()` without changing any code:
 
 - **Sent messages are now limited.** Earlier versions left the send limit at the
   grpc-js default, which is unlimited. It now defaults to the receive limit, 4 MB
@@ -223,6 +223,9 @@ Two behaviour changes affect functions that call `serve()` without changing any 
   `TLS_SERVER_CERTS_DIR` or one of the message size variables for some other reason
   will now pick it up. An empty value is treated as unset, so `value: ""` in a pod
   spec falls back to the default rather than replacing it.
+- **A function that cannot bind its address exits 1.** Earlier versions logged the
+  bind error and carried on with nothing listening. The container now crashes
+  instead, so the failure is visible to Kubernetes.
 
 `serve()` takes an options object for the cases where the defaults do not fit:
 
@@ -339,7 +342,10 @@ const logger = pino({
 });
 
 const server = newGrpcServer(new FunctionRunner(new MyFunction(), logger), logger);
-startServer(server, opts as ServerOptions, logger);
+// Binding finishes after startServer returns, so a failure such as the port
+// being in use arrives through the optional callback. Without one it is only
+// logged.
+startServer(server, opts as ServerOptions, logger, () => process.exit(1));
 
 process.on("SIGTERM", () => {
     server.tryShutdown(() => process.exit(0));
@@ -502,7 +508,7 @@ normal(rsp, "Function completed successfully");
 - `DEFAULT_ADDRESS` - `0.0.0.0:9443`
 - `DEFAULT_TLS_SERVER_CERTS_DIR` - `/tls/server`
 - `newGrpcServer(runner, logger)` - Create gRPC server instance
-- `startServer(server, opts, logger)` - Bind and start the server on specified address
+- `startServer(server, opts, logger, onBindError?)` - Bind and start the server on specified address; `onBindError` is called if binding fails
 - `getServerCredentials(opts)` - Create server credentials (TLS or insecure mode)
 
 ### Resource Helpers

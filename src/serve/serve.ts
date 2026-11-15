@@ -160,7 +160,8 @@ export function usageErrorText(name: string, error: unknown): string {
  * Run a composition function as a gRPC server.
  *
  * Parses the standard flags, creates a logger, starts the server, and shuts it
- * down cleanly on SIGINT and SIGTERM. This is everything a function's
+ * down cleanly on SIGINT and SIGTERM. If the server cannot bind its address,
+ * the process exits with status 1. This is everything a function's
  * entrypoint needs to do.
  *
  * @param fn - A {@link ComposeFunction}, or a {@link FunctionHandler} for
@@ -208,7 +209,10 @@ export function serve(fn: ComposeFunction | FunctionHandler, opts: ServeOptions 
     maxRecvMessageSize: serverOptions.maxRecvMessageSize,
     maxSendMessageSize: serverOptions.maxSendMessageSize,
   });
-  startServer(server, serverOptions, logger);
+  // A function that cannot listen is not serving. Exit, so the failure shows up
+  // as a crashed container rather than one that looks healthy with nothing
+  // behind it. startServer has already logged why.
+  startServer(server, serverOptions, logger, () => process.exit(1));
 
   const shutdown = (signal: string): void => {
     logger.info(`received ${signal}, shutting down`);

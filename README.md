@@ -720,7 +720,7 @@ import {
 - **`parseArgs(argv)`** - Parse the standard function flags
 - **`helpText(name)`** - The `--help` text for the standard flags
 - **`newGrpcServer(runner, logger)`** - Create a gRPC server instance
-- **`startServer(server, opts, logger)`** - Bind and start the server
+- **`startServer(server, opts, logger, onBindError?)`** - Bind and start the server; `onBindError` is called if binding fails
 
 #### Response Functions
 

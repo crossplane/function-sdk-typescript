@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import * as grpc from '@grpc/grpc-js';
+import { pino } from 'pino';
 import { CLI } from '../cli/cli.js';
 import {
   DEFAULT_ADDRESS,
@@ -260,6 +262,46 @@ describe('serve', () => {
 
     expect(code).toBe(2);
     expect(stderr).toContain('got "16MB"');
+  });
+
+  it('should exit 1 when the server cannot bind its address', async () => {
+    // Occupy a port, then ask serve to listen on it.
+    const blocker = new grpc.Server();
+    const port = await new Promise<number>((resolve, reject) => {
+      blocker.bindAsync('127.0.0.1:0', grpc.ServerCredentials.createInsecure(), (err, p) =>
+        err ? reject(err) : resolve(p)
+      );
+    });
+
+    // The bind fails after serve returns, so wait for the exit rather than
+    // throwing from it as run() does.
+    const exited = new Promise<unknown>((resolve) => {
+      vi.spyOn(process, 'exit').mockImplementation((code) => {
+        resolve(code);
+        return undefined as never;
+      });
+    });
+
+    // serve installs signal handlers; remove them again afterwards.
+    const signals = ['SIGINT', 'SIGTERM'] as const;
+    const before = signals.map((s) => process.listeners(s));
+
+    const server = serve((_req, rsp) => rsp, {
+      argv: ['--insecure', '--address', `127.0.0.1:${port}`],
+      logger: pino({ level: 'silent' }),
+    });
+
+    try {
+      expect(await exited).toBe(1);
+    } finally {
+      server.forceShutdown();
+      blocker.forceShutdown();
+      signals.forEach((s, i) => {
+        for (const l of process.listeners(s)) {
+          if (!before[i].includes(l)) process.off(s, l);
+        }
+      });
+    }
   });
 });
 

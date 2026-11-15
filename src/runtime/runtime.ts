@@ -145,12 +145,19 @@ export function newGrpcServer(
  * based on the provided options. The binding happens asynchronously.
  *
  * The server will log when it successfully starts listening or if an error occurs
- * during binding.
+ * during binding. Binding finishes after this function returns, so a failure to
+ * bind — the port is in use, say — is reported through `onBindError` rather
+ * than thrown. Without one, the error is only logged, and the server is left
+ * not listening.
  *
  * @param server - The gRPC Server instance to start
  * @param opts - Server options including address and TLS configuration
  * @param logger - Logger instance for info and error logging
- * @returns The same server instance (now bound and listening)
+ * @param onBindError - Called if the server fails to bind, after the error has
+ *   been logged.
+ * @returns The same server instance, bound and listening once binding finishes
+ * @throws If the TLS certificates cannot be read, or the address cannot be
+ *   parsed at all.
  *
  * @example
  * ```typescript
@@ -166,15 +173,24 @@ export function newGrpcServer(
  *   address: "localhost:9443",
  *   insecure: true
  * }, logger);
+ *
+ * // Exit if the server cannot bind, rather than running with nothing listening
+ * startServer(server, opts, logger, () => process.exit(1));
  * ```
  */
-export function startServer(server: grpc.Server, opts: ServerOptions, logger: Logger): grpc.Server {
+export function startServer(
+  server: grpc.Server,
+  opts: ServerOptions,
+  logger: Logger,
+  onBindError?: (err: Error) => void
+): grpc.Server {
   const creds = getServerCredentials(opts);
   logger.debug(`serverCredentials type: ${creds.constructor.name}`);
 
   server.bindAsync(opts.address, creds, (err) => {
     if (err) {
       logger.error(`server bind error: ${err.message}`);
+      onBindError?.(err);
       return;
     }
     logger.info(`server started and listening on ${opts.address}`);
