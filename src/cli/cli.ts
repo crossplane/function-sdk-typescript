@@ -141,14 +141,17 @@ export class CLI {
 
   /**
    * @throws If a custom flag reuses a standard flag's name or another flag's
-   *   short alias, or is a boolean flag that defaults to true.
+   *   short alias, has a default of the wrong type, or is a boolean flag that
+   *   defaults to true.
    */
   constructor(opts?: CLIOptions) {
     this.programName = opts?.name ?? defaultName();
 
     const custom = opts?.flags ?? {};
     for (const name of Object.keys(custom)) {
-      if (name in standardFlags) {
+      // Object.hasOwn rather than `in`, which would also match properties
+      // inherited from Object.prototype, such as a flag named "constructor".
+      if (Object.hasOwn(standardFlags, name)) {
         throw new Error(`flag "${name}" conflicts with a standard flag`);
       }
     }
@@ -156,6 +159,13 @@ export class CLI {
 
     const shorts = new Map<string, string>();
     for (const [name, spec] of Object.entries(this.allFlags)) {
+      // A boolean flag defaulting to the string 'false' would otherwise
+      // resolve to that string, which is truthy.
+      if (spec.default !== undefined && typeof spec.default !== spec.type) {
+        throw new Error(
+          `${spec.type} flag "${name}" has a ${typeof spec.default} default; it must be a ${spec.type}`
+        );
+      }
       if (spec.type === 'boolean' && spec.default === true) {
         throw new Error(
           `boolean flag "${name}" cannot default to true, since it could not be turned off`
@@ -207,9 +217,14 @@ export class CLI {
 
     // Check the sizes now, so that a bad value is reported as a usage error
     // rather than silently replaced by a default once the server starts.
-    for (const name of megabyteFlags) {
-      const value = resolved[name];
-      if (value !== undefined) toBytes(name, this.allFlags[name], String(value));
+    // Skip it when help is asked for: someone running --help may well be
+    // trying to find out what a valid size looks like, and the error would
+    // only point them back at --help.
+    if (resolved.help !== true) {
+      for (const name of megabyteFlags) {
+        const value = resolved[name];
+        if (value !== undefined) toBytes(name, this.allFlags[name], String(value));
+      }
     }
 
     this.parsedValues = resolved;
@@ -236,7 +251,9 @@ export class CLI {
   /**
    * Return {@link ServerOptions} derived from the standard flags.
    *
-   * @throws If {@link parse} has not been called.
+   * @throws If {@link parse} has not been called, or if a message size is
+   *   invalid. {@link parse} reports an invalid size itself, except when
+   *   --help was given.
    */
   standardOptions(): ServerOptions {
     const values = this.values;
@@ -273,7 +290,7 @@ export class CLI {
     const rows = Object.entries(this.allFlags).map(([flag, spec]) => {
       const short = spec.short ? `-${spec.short}, ` : '    ';
       const value = spec.type === 'string' ? ' <value>' : '';
-      const envKeys = [spec.env, ...(spec.envAliases ?? [])].filter(Boolean);
+      const envKeys = envKeysOf(spec);
       const env = envKeys.length > 0 ? ` [env: ${envKeys.join(', ')}]` : '';
       return { usage: `  ${short}--${flag}${value}`, description: spec.description + env };
     });
@@ -310,6 +327,11 @@ export function newLogger(debug: boolean): Logger {
   });
 }
 
+/** The environment variables a flag reads, in the order they are checked. */
+function envKeysOf(spec: FlagSpec | undefined): string[] {
+  return [spec?.env, ...(spec?.envAliases ?? [])].filter((key): key is string => !!key);
+}
+
 function resolveValue(spec: FlagSpec, cliValue: FlagValue): FlagValue {
   // node:util leaves a flag that was not given undefined, and a boolean flag
   // can only be given as true, so undefined means "not on the command line".
@@ -320,8 +342,7 @@ function resolveValue(spec: FlagSpec, cliValue: FlagValue): FlagValue {
   // tls-server-certs-dir, silently downgrade TLS to plaintext.
   if (cliValue !== undefined && cliValue !== '') return cliValue;
 
-  const envKeys = [spec.env, ...(spec.envAliases ?? [])].filter(Boolean) as string[];
-  for (const key of envKeys) {
+  for (const key of envKeysOf(spec)) {
     const envValue = process.env[key];
     if (envValue !== undefined && envValue !== '') {
       return spec.type === 'boolean'
@@ -340,8 +361,7 @@ function resolveValue(spec: FlagSpec, cliValue: FlagValue): FlagValue {
  *   32-bit limit grpc-js imposes on the message size channel arguments.
  */
 function toBytes(name: string, spec: FlagSpec | undefined, value: string): number {
-  const envKeys = [spec?.env, ...(spec?.envAliases ?? [])].filter(Boolean);
-  const source = [`--${name}`, ...envKeys].join(' or ');
+  const source = [`--${name}`, ...envKeysOf(spec)].join(' or ');
 
   // Leading zeros are allowed: 0007 and 7 mean the same thing.
   if (!/^[0-9]+$/.test(value) || Number(value) === 0) {

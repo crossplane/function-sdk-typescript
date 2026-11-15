@@ -223,10 +223,6 @@ Two behaviour changes affect functions that call `serve()` without changing any 
   `TLS_SERVER_CERTS_DIR` or one of the message size variables for some other reason
   will now pick it up. An empty value is treated as unset, so `value: ""` in a pod
   spec falls back to the default rather than replacing it.
-- **A function that cannot bind exits non-zero.** Earlier versions logged a bind error
-  and exited 0, leaving a container running with nothing listening behind it. The
-  process now exits 1 when the address cannot be bound, and 2 when the address itself
-  is unparsable, so a supervisor or readiness probe can see the failure.
 
 `serve()` takes an options object for the cases where the defaults do not fit:
 

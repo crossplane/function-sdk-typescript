@@ -241,19 +241,25 @@ describe('serve', () => {
     expect(stdout).toBe(`${helpText('my-fn')}\n`);
   });
 
-  it('should report an address grpc-js cannot parse as a usage error', () => {
-    // grpc-js throws this synchronously from bindAsync, so without catching
-    // it the process dies with a stack trace through grpc-js's internals.
-    const { code, stderr } = run({
-      name: 'my-fn',
-      argv: [],
-      // insecure, so we reach bindAsync instead of reading TLS certs.
-      serverOptions: { address: '', insecure: true },
-    });
+  it('should print help even when a message size in the environment is invalid', () => {
+    // Someone running --help may be trying to find out what a valid size looks
+    // like. Rejecting the size would only send them back to --help.
+    vi.stubEnv('MAX_GRPC_MESSAGE_SIZE', '16MB');
+
+    const { code, stdout, stderr } = run({ name: 'my-fn', argv: ['--help'] });
+
+    expect(code).toBe(0);
+    expect(stdout).toBe(`${helpText('my-fn')}\n`);
+    expect(stderr).toBe('');
+  });
+
+  it('should still reject an invalid message size without --help', () => {
+    vi.stubEnv('MAX_GRPC_MESSAGE_SIZE', '16MB');
+
+    const { code, stderr } = run({ name: 'my-fn', argv: [] });
 
     expect(code).toBe(2);
-    expect(stderr).toContain('my-fn: Could not parse port ""');
-    expect(stderr).toContain("Try 'my-fn --help' for the available flags.");
+    expect(stderr).toContain('got "16MB"');
   });
 });
 

@@ -144,6 +144,34 @@ describe('CLI', () => {
       ).toThrow(/boolean flag "feature" cannot default to true/);
     });
 
+    it('should reject a default whose type does not match the flag', () => {
+      // The string 'false' is truthy, so a boolean flag defaulting to it would
+      // read as on.
+      expect(
+        () =>
+          new CLI({
+            flags: { verbose: { type: 'boolean', default: 'false', description: 'Verbose.' } },
+          })
+      ).toThrow(/boolean flag "verbose" has a string default; it must be a boolean/);
+      expect(
+        () =>
+          new CLI({
+            flags: { size: { type: 'string', default: false, description: 'Size.' } },
+          })
+      ).toThrow(/string flag "size" has a boolean default; it must be a string/);
+    });
+
+    it('should accept a custom flag named after an Object.prototype property', () => {
+      // `name in standardFlags` would match inherited properties and report a
+      // conflict with a standard flag that does not exist.
+      const cli = new CLI({
+        name: 'test',
+        flags: { constructor: { type: 'string', default: 'x', description: 'Test.' } },
+      });
+
+      expect(cli.parse([]).constructor).toBe('x');
+    });
+
     it('should default a custom boolean flag without a declared default to false', () => {
       const cli = new CLI({
         flags: { verbose: { type: 'boolean', description: 'Verbose.' } },
@@ -265,6 +293,15 @@ describe('CLI', () => {
       const cli = new CLI({ name: 'test' });
       expect(() => cli.parse(['--max-recv-message-size', 'eight'])).toThrow();
       expect(cli.parsed).toBe(false);
+    });
+
+    it('should not check message sizes when help is asked for', () => {
+      process.env.MAX_GRPC_MESSAGE_SIZE = '16MB';
+      const cli = new CLI({ name: 'test' });
+
+      expect(cli.parse(['--help']).help).toBe(true);
+      // The size is still invalid, and standardOptions still says so.
+      expect(() => cli.standardOptions()).toThrow(/got "16MB"/);
     });
   });
 
