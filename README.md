@@ -719,7 +719,7 @@ import {
 - **`fromCompose(compose)`** - Adapt a `ComposeFunction` to the `FunctionHandler` interface
 - **`parseArgs(argv)`** - Parse the standard function flags
 - **`helpText(name)`** - The `--help` text for the standard flags
-- **`newGrpcServer(runner, logger)`** - Create a gRPC server instance
+- **`newGrpcServer(runner, logger, opts?)`** - Create a gRPC server instance; `opts` sets the message size limits in bytes
 - **`startServer(server, opts, logger, onBindError?)`** - Bind and start the server; `onBindError` is called if binding fails
 
 #### Response Functions

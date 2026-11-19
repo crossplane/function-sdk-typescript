@@ -118,6 +118,17 @@ describe('parseArgs', () => {
     expect(parseArgs(['-h']).help).toBe(true);
   });
 
+  it('should not check message sizes when help is asked for', () => {
+    // CLI.parse skips the check so that help still prints, and parseArgs
+    // should agree with it rather than throw on the same arguments.
+    vi.stubEnv('MAX_GRPC_MESSAGE_SIZE', '16MB');
+
+    const opts = parseArgs(['--help']);
+    expect(opts.help).toBe(true);
+    expect(opts.address).toBe(DEFAULT_ADDRESS);
+    expect(opts.maxRecvMessageSize).toBeUndefined();
+  });
+
   it('should reject an unrecognised flag', () => {
     expect(() => parseArgs(['--nope'])).toThrow(/Unknown option '--nope'/);
   });

@@ -137,7 +137,18 @@ export interface ParsedArgs extends ServerOptions {
 export function parseArgs(argv: string[]): ParsedArgs {
   const cli = new CLI();
   const values = cli.parse(argv);
-  return { ...cli.standardOptions(), help: values.help === true };
+  if (values.help !== true) return { ...cli.standardOptions(), help: false };
+
+  // parse() leaves the message sizes unchecked when help is asked for, so
+  // that help still prints when one is invalid. standardOptions() would throw
+  // on it, so leave the sizes out: nothing is served when help is shown.
+  return {
+    address: values.address as string,
+    debug: values.debug === true,
+    insecure: values.insecure === true,
+    tlsServerCertsDir: values['tls-server-certs-dir'] as string,
+    help: true,
+  };
 }
 
 /** The --help text for a function with only the standard flags. */

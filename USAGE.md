@@ -310,7 +310,8 @@ Each custom flag supports:
 - **`description`** — Shown in `--help` output.
 
 The constructor throws if a custom flag reuses a standard flag's name or any other
-flag's short alias, or is a boolean flag defaulting to `true`.
+flag's short alias, has a `default` whose type doesn't match its `type`, or is a boolean
+flag defaulting to `true`.
 
 ### Building the Server Yourself
 
@@ -507,7 +508,7 @@ normal(rsp, "Function completed successfully");
 - `helpText(name)` - The `--help` text for the standard flags
 - `DEFAULT_ADDRESS` - `0.0.0.0:9443`
 - `DEFAULT_TLS_SERVER_CERTS_DIR` - `/tls/server`
-- `newGrpcServer(runner, logger)` - Create gRPC server instance
+- `newGrpcServer(runner, logger, opts?)` - Create gRPC server instance; `opts` sets `maxRecvMessageSize` and `maxSendMessageSize` in bytes
 - `startServer(server, opts, logger, onBindError?)` - Bind and start the server on specified address; `onBindError` is called if binding fails
 - `getServerCredentials(opts)` - Create server credentials (TLS or insecure mode)
 

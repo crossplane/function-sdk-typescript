@@ -166,7 +166,7 @@ describe('CLI', () => {
       // conflict with a standard flag that does not exist.
       const cli = new CLI({
         name: 'test',
-        flags: { constructor: { type: 'string', default: 'x', description: 'Test.' } },
+        flags: { constructor: { type: 'string' as const, default: 'x', description: 'Test.' } },
       });
 
       expect(cli.parse([]).constructor).toBe('x');
