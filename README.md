@@ -150,7 +150,7 @@ See [USAGE.md](USAGE.md) for complete examples and API documentation.
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22+
 - npm or yarn
 - Docker (for building container images)
 - protoc (Protocol Buffer compiler) - `brew install protobuf`
