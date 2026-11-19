@@ -8,7 +8,7 @@
     "node_modules",
     "src/proto/**",
     "**/*.test.ts",
-    "vitest.config.ts"
+    "src/vitest.config.ts"
   ],
   "compilerOptions": {
     // File Layout
